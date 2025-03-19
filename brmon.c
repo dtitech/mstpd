@@ -61,8 +61,7 @@ struct rtnl_handle rth_state;
 
 bool have_per_vlan_state = 1;
 
-static int dump_br_msg(const struct sockaddr_nl *who, struct nlmsghdr *n,
-                       void *arg)
+static int dump_br_msg(struct nlmsghdr *n, void *arg)
 {
     struct ifinfomsg *ifi = NLMSG_DATA(n);
     struct rtattr * tb[IFLA_MAX + 1];
@@ -169,8 +168,7 @@ static int dump_br_msg(const struct sockaddr_nl *who, struct nlmsghdr *n,
     return 0;
 }
 
-static int dump_vlan_msg(const struct sockaddr_nl *who, struct nlmsghdr *n,
-                         void *arg)
+static int dump_vlan_msg(struct nlmsghdr *n, void *arg)
 {
     struct br_vlan_msg *bvm = NLMSG_DATA(n);
     struct rtattr *pos;
@@ -215,8 +213,7 @@ struct vlan_dump_table {
     uint8_t *table;
 };
 
-static int vlan_table_msg(const struct sockaddr_nl *who, struct nlmsghdr *n,
-                          void *arg)
+static int vlan_table_msg(struct nlmsghdr *n, void *arg)
 {
     struct br_vlan_msg *bvm = NLMSG_DATA(n);
     struct rtattr *pos;
@@ -259,20 +256,25 @@ static int vlan_table_msg(const struct sockaddr_nl *who, struct nlmsghdr *n,
     return 0;
 }
 
-static int dump_msg(const struct sockaddr_nl *who, struct nlmsghdr *n,
-                    void *arg)
+static int dump_msg(struct nlmsghdr *n, void *arg)
 {
     switch (n->nlmsg_type)
     {
         case RTM_NEWLINK:
         case RTM_DELLINK:
-            return dump_br_msg(who, n, arg);
+            return dump_br_msg(n, arg);
         case RTM_NEWVLAN:
         case RTM_DELVLAN:
-            return dump_vlan_msg(who, n, arg);
+            return dump_vlan_msg(n, arg);
         default:
             return 0;
     }
+}
+
+static int dump_listen_msg(struct rtnl_ctrl_data *, struct nlmsghdr *n,
+                           void *arg)
+{
+    return dump_msg(n, arg);
 }
 
 int fill_vlan_table(sysdep_if_data_t *if_data)
@@ -294,7 +296,7 @@ int fill_vlan_table(sysdep_if_data_t *if_data)
         return -1;
     }
 
-    if(rtnl_dump_filter(&rth_state, vlan_table_msg, if_data, NULL, NULL) < 0)
+    if(rtnl_dump_filter(&rth_state, vlan_table_msg, if_data) < 0)
     {
         ERROR("Dump terminated\n");
         return -1;
@@ -305,7 +307,7 @@ int fill_vlan_table(sysdep_if_data_t *if_data)
 
 static inline void br_ev_handler(uint32_t events, struct epoll_event_handler *h)
 {
-    if(rtnl_listen(&rth, dump_msg, stdout) < 0)
+    if(rtnl_listen(&rth, dump_listen_msg, stdout) < 0)
     {
         ERROR("Error on bridge monitoring socket\n");
     }
@@ -331,13 +333,13 @@ int init_bridge_ops(void)
         return -1;
     }
 
-    if(rtnl_wilddump_request(&rth, PF_BRIDGE, RTM_GETLINK) < 0)
+    if(rtnl_linkdump_req(&rth, PF_BRIDGE) < 0)
     {
         ERROR("Cannot send dump request: %m\n");
         return -1;
     }
 
-    if(rtnl_dump_filter(&rth, dump_msg, stdout, NULL, NULL) < 0)
+    if(rtnl_dump_filter(&rth, dump_msg, stdout) < 0)
     {
         ERROR("Dump terminated\n");
         return -1;

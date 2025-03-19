@@ -544,7 +544,7 @@ static int br_set_vlan_state(struct rtnl_handle *rth, unsigned ifindex, __u16 vi
 
     addraw_l(&req.n, sizeof(req.buf), RTA_DATA(rta), RTA_PAYLOAD(rta));
 
-    return rtnl_talk(rth, &req.n, 0, 0, NULL, NULL, NULL);
+    return rtnl_talk(rth, &req.n, NULL);
 }
 
 static int br_set_state(struct rtnl_handle *rth, unsigned ifindex, __u8 state)
@@ -568,7 +568,7 @@ static int br_set_state(struct rtnl_handle *rth, unsigned ifindex, __u8 state)
 
     addattr8(&req.n, sizeof(req.buf), IFLA_PROTINFO, state);
 
-    return rtnl_talk(rth, &req.n, 0, 0, NULL, NULL, NULL);
+    return rtnl_talk(rth, &req.n, NULL);
 }
 
 static int br_flush_port(char *ifname)
