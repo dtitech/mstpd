@@ -1,27 +1,23 @@
 mstpd: Multiple Spanning Tree Protocol Daemon
 =============================================
 
-[![Build Status](https://travis-ci.org/mstpd/mstpd.svg?branch=master)](https://travis-ci.org/mstpd/mstpd)
-
 MSTPD is an open source user-space daemon licensed under GPLv2.
 
 MSTPD is reported to be compliant with IXIA ANVL RSTP test suite, with
 the notable exception of looped-back BPDUs (see discussion on the matter
 on the Implementation Features wiki page:
-https://github.com/mstpd/mstpd/wiki/ImplementationFeatures).
+https://github.com/dtitech/mstpd/wiki/ImplementationFeatures).
 
-**Important note!** MSTP part of the code (as opposed to STP/RSTP part)
-is mainly untested, so I believe it will behave unexpectedly in many
-situations. Don't use it in production!
+**Important note!** MSTP part of the code is currently in experimental phase,
+so it should be mostly stable, but it can behave unexpectedly in corner cases.
+Be warry if using.
 
-Official repository: https://github.com/mstpd/mstpd
-
-*IRC: Feel free to join and chat with us on #mstpd @ freenode!*
+Official repository: https://github.com/dtitech/mstpd
 
 Implementation Features
 -----------------------
 
-See the wiki page: https://github.com/mstpd/mstpd/wiki/ImplementationFeatures
+See the wiki page: https://github.com/dtitech/mstpd/wiki/ImplementationFeatures
 
 Also MSTPD includes a number of useful features which are not defined in
 802.1Q-2005 standard, but are found on many commercial switches. Namely:
@@ -70,19 +66,9 @@ interconnected with the VLANs infrastructure, namely:
   - Support per-MSTI port states (Discarding / Learning / Forwarding) so
   that each bridge port can have different states for different MSTIs.
 
-This is a big flaw in Linux. Actually, in Linux bridge code is totally
-independent from VLAN code and given wide deployment of the 802.1Q-2005
-compatible bridges this is wrong approach. Bridge and VLAN code should
-be merged together.
-
-Anyway, this is not true for now, so MSTP daemon is not as useful for
-the bare Linux box (except for the (R)STP case - as stated above it
-works with the kernel bridge well enough in this case). But there are
-plenty embedded cases where bridging functions are implemented by
-specialized hardware with support of custom drivers. For such cases MSTP
-daemon can be successfully utilized. The daemon code has a few hooks
-where driver-specific code should be inserted to control the bridge
-hardware.
+Daemon is currently using Linux bridge per VLAN stp states, so MSTP is
+usable on software bridge and on Mellanox Spectrum based platforms with
+included kernel patches.
 
 ACKNOWLEDGEMENTS
 ----------------
