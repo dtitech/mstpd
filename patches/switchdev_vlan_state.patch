@@ -1,0 +1,139 @@
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Kyzlink?= <tkyzlink@dtitech.cz>
+Date: Wed, 19 Mar 2025 14:07:06 +0100
+Subject: [PATCH] net/bridge: add bridge per vlan stp state support to switchdev
+
+Bridge has working per VLAN STP states, but does not pass this changes to switchdev drivers.
+
+This adds switchdev support for propagating per VLAN STP states to drivers, and bridge support
+to pass per VLAN STP state changes to switchdev.
+
+It is currently needed for MSTP in mstpd daemon to properly work with dedicated switching ICs.
+
+---
+ include/net/switchdev.h      |  7 +++++++
+ net/bridge/br_private_stp.h  |  2 ++
+ net/bridge/br_stp.c          |  2 +-
+ net/bridge/br_vlan_options.c | 28 +++++++++++++++++++++++++++-
+ 4 files changed, 37 insertions(+), 2 deletions(-)
+
+diff --git a/include/net/switchdev.h b/include/net/switchdev.h
+index 8346b0d29542c3..7e6468d301b953 100644
+--- a/include/net/switchdev.h
++++ b/include/net/switchdev.h
+@@ -31,6 +31,7 @@ enum switchdev_attr_id {
+ 	SWITCHDEV_ATTR_ID_BRIDGE_MST,
+ 	SWITCHDEV_ATTR_ID_MRP_PORT_ROLE,
+ 	SWITCHDEV_ATTR_ID_VLAN_MSTI,
++	SWITCHDEV_ATTR_ID_PORT_VLAN_STATE,
+ };
+ 
+ struct switchdev_mst_state {
+@@ -48,6 +49,11 @@ struct switchdev_vlan_msti {
+ 	u16 msti;
+ };
+ 
++struct switchdev_vlan_state {
++	u16 vid;
++	u8 state;
++};
++
+ struct switchdev_attr {
+ 	struct net_device *orig_dev;
+ 	enum switchdev_attr_id id;
+@@ -66,6 +72,7 @@ struct switchdev_attr {
+ 		bool mc_disabled;			/* MC_DISABLED */
+ 		u8 mrp_port_role;			/* MRP_PORT_ROLE */
+ 		struct switchdev_vlan_msti vlan_msti;	/* VLAN_MSTI */
++		struct switchdev_vlan_state vlan_state;	/* VLAN_STATE */
+ 	} u;
+ };
+ 
+diff --git a/net/bridge/br_private_stp.h b/net/bridge/br_private_stp.h
+index 814cf1364cfb3a..9daeb6341f2e74 100644
+--- a/net/bridge/br_private_stp.h
++++ b/net/bridge/br_private_stp.h
+@@ -47,6 +47,8 @@ static inline int br_is_designated_port(const struct net_bridge_port *p)
+ 
+ 
+ /* br_stp.c */
++extern const char *const br_port_state_names[];
++
+ void br_become_root_bridge(struct net_bridge *br);
+ void br_config_bpdu_generation(struct net_bridge *);
+ void br_configuration_update(struct net_bridge *);
+diff --git a/net/bridge/br_stp.c b/net/bridge/br_stp.c
+index 7d27b2e6038fb7..55931abbcf9477 100644
+--- a/net/bridge/br_stp.c
++++ b/net/bridge/br_stp.c
+@@ -18,7 +18,7 @@
+  */
+ #define MESSAGE_AGE_INCR	((HZ / 256) + 1)
+ 
+-static const char *const br_port_state_names[] = {
++const char *const br_port_state_names[] = {
+ 	[BR_STATE_DISABLED] = "disabled",
+ 	[BR_STATE_LISTENING] = "listening",
+ 	[BR_STATE_LEARNING] = "learning",
+diff --git a/net/bridge/br_vlan_options.c b/net/bridge/br_vlan_options.c
+index 8fa89b04ee942d..51cd6bd878f65b 100644
+--- a/net/bridge/br_vlan_options.c
++++ b/net/bridge/br_vlan_options.c
+@@ -5,8 +5,10 @@
+ #include <linux/rtnetlink.h>
+ #include <linux/slab.h>
+ #include <net/ip_tunnels.h>
++#include <net/switchdev.h>
+ 
+ #include "br_private.h"
++#include "br_private_stp.h"
+ #include "br_private_tunnel.h"
+ 
+ static bool __vlan_tun_put(struct sk_buff *skb, const struct net_bridge_vlan *v)
+@@ -92,6 +94,7 @@ static int br_vlan_modify_state(struct net_bridge_vlan_group *vg,
+ 				bool *changed,
+ 				struct netlink_ext_ack *extack)
+ {
++	struct net_bridge_port *p = NULL;
+ 	struct net_bridge *br;
+ 
+ 	ASSERT_RTNL();
+@@ -103,8 +106,10 @@ static int br_vlan_modify_state(struct net_bridge_vlan_group *vg,
+ 
+ 	if (br_vlan_is_brentry(v))
+ 		br = v->br;
+-	else
++	else {
++		p = v->port;
+ 		br = v->port->br;
++	}
+ 
+ 	if (br->stp_enabled == BR_KERNEL_STP) {
+ 		NL_SET_ERR_MSG_MOD(extack, "Can't modify vlan state when using kernel STP");
+@@ -119,6 +124,27 @@ static int br_vlan_modify_state(struct net_bridge_vlan_group *vg,
+ 	if (v->state == state)
+ 		return 0;
+ 
++	if (p) {
++		struct switchdev_attr attr = {
++			.id = SWITCHDEV_ATTR_ID_PORT_VLAN_STATE,
++			.orig_dev = p->dev,
++			.u.vlan_state = {
++				.vid = v->vid,
++				.state = state,
++			},
++		};
++		int err;
++
++		err = switchdev_port_attr_set(p->dev, &attr, NULL);
++		if (err && err != -EOPNOTSUPP)
++			br_warn(p->br, "error setting offload STP state on port %u(%s) VLAN %u\n",
++					(unsigned int) p->port_no, p->dev->name, (unsigned int) v->vid);
++		else
++			br_info(p->br, "port %u(%s) VLAN %u entered %s state\n",
++					(unsigned int) p->port_no, p->dev->name, (unsigned int) v->vid,
++					br_port_state_names[v->state]);
++	}
++
+ 	if (v->vid == br_get_pvid(vg))
+ 		br_vlan_set_pvid_state(vg, state);
+ 
