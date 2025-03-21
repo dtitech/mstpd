@@ -27,6 +27,7 @@
 #ifndef CTL_SOCKET_H
 #define CTL_SOCKET_H
 
+#include <stdio.h>
 #include <string.h>
 
 #include <netinet/in.h>
@@ -502,5 +503,31 @@ CTL_DECLARE(name)                                                \
     name ## _COPY_OUT;                                           \
     return 0;                                                    \
 }
+
+/* Supported output formats */
+typedef enum {
+    FORMAT_PLAIN, /* plain text (default) */
+    FORMAT_JSON   /* JSON */
+} format_id_t;
+
+/* Output format */
+extern format_id_t format;
+
+struct command
+{
+    int nargs;
+    int optargs;
+    const char *name;
+    int (*func) (int argc, char *const *argv);
+    const char *format;
+    const char *help;
+};
+
+const struct command *command_lookup_and_validate(int argc, char *const *argv,
+                                                  int line_num);
+
+int process_batch_cmds(FILE *batch_file, bool ignore, bool is_stdin);
+
+void help(void);
 
 #endif /* CTL_SOCKET_H */

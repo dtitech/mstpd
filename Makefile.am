@@ -10,7 +10,8 @@ mstpd_SOURCES = \
 	list.h log.h driver_deps.c
 
 mstpctl_SOURCES = \
-	ctl_main.c ctl_socket_client.c ctl_socket_client.h ctl_functions.h
+	ctl_main.c ctl_socket_client.c ctl_functions.c ctl_socket_client.h \
+	ctl_functions.h
 
 mstpd_CFLAGS = \
 	-Os -Wall -D_REENTRANT -D__LINUX__ -I. \
