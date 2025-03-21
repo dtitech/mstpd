@@ -571,16 +571,30 @@ static int br_set_state(struct rtnl_handle *rth, unsigned ifindex, __u8 state)
     return rtnl_talk(rth, &req.n, NULL);
 }
 
-static int br_flush_port(char *ifname)
+static int br_flush_port(struct rtnl_handle *rth, unsigned br_ifindex, unsigned port_ifindex, int vid)
 {
-    char fname[128];
-    snprintf(fname, sizeof(fname), SYSFS_CLASS_NET "/%s/brport/flush", ifname);
-    int fd = open(fname, O_WRONLY);
-    TSTM(0 <= fd, -1, "Couldn't open flush file %s for write: %m", fname);
-    int write_result = write(fd, "1", 1);
-    close(fd);
-    TST(1 == write_result, -1);
-    return 0;
+    struct
+    {
+        struct nlmsghdr n;
+        struct ndmsg ndm;
+        char buf[256];
+    } req;
+
+    memset(&req, 0, sizeof(req));
+
+    req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ndmsg));
+    req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_BULK;
+    req.n.nlmsg_type = RTM_DELNEIGH;
+    req.ndm.ndm_family = PF_BRIDGE;
+    req.ndm.ndm_ifindex = br_ifindex;
+
+    req.ndm.ndm_flags = NTF_SELF;
+
+    addattr32(&req.n, sizeof(req.buf), NDA_IFINDEX, port_ifindex);
+    if (vid > -1)
+	    addattr16(&req.n, sizeof(req), NDA_VLAN, vid);
+
+    return rtnl_talk(rth, &req.n, NULL);
 }
 
 static int br_set_ageing_time(char *brname, unsigned int ageing_time)
@@ -673,9 +687,27 @@ void MSTP_OUT_flush_all_fids(per_tree_port_t * ptp)
     bridge_t *br = prt->bridge;
 
     /* Translate CIST flushing to the kernel bridge code */
-    if(0 == ptp->MSTID)
+    if(have_per_vlan_state)
+    {
+        int i;
+
+        for (i = 1; i <= MAX_VID; i++)
+        {
+            __u16 fid = br->vid2fid[i];
+
+            if (br->fid2mstid[fid] != ptp->MSTID)
+                continue;
+
+            if (prt->sysdeps.vlan_state[i] == VLAN_STATE_UNASSIGNED)
+                continue;
+
+            if(0 > br_flush_port(&rth_state, br->sysdeps.if_index, prt->sysdeps.if_index, i))
+               ERROR_PRTNAME(br, prt, "Couldn't flush kernel bridge forwarding database for vid %i", i);
+        }
+    }
+    else if(0 == ptp->MSTID)
     { /* CIST */
-        if(0 > br_flush_port(prt->sysdeps.name))
+        if(0 > br_flush_port(&rth_state, br->sysdeps.if_index, prt->sysdeps.if_index, -1))
             ERROR_PRTNAME(br, prt,
                           "Couldn't flush kernel bridge forwarding database");
     }
