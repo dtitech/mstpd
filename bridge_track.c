@@ -48,6 +48,27 @@
 static LIST_HEAD(bridges);
 static LIST_HEAD(ports);
 
+static void load_config(const char *ifname)
+{
+    char fname[128];
+    FILE *config_file;
+    int rc;
+
+    snprintf(fname, sizeof(fname), MSTPD_CONFIG_DIR "/%s.conf", ifname);
+
+    config_file = fopen(fname, "rb");
+    if (!config_file) {
+	    LOG("Failed to open %s", fname);
+	    return;
+    }
+
+    rc = process_batch_cmds(config_file, true, false);
+    if (rc)
+	    INFO("Failed applying config for %s: %i", ifname, rc);
+
+    fclose(config_file);
+}
+
 static bridge_t * create_br(int if_index)
 {
     bridge_t *br;
@@ -65,6 +86,7 @@ static bridge_t * create_br(int if_index)
         goto err;
 
     list_add_tail(&br->list, &bridges);
+    load_config(br->sysdeps.name);
     return br;
 err:
     free(br);
@@ -115,6 +137,7 @@ static port_t * create_if(bridge_t * br, int if_index)
     if(!MSTP_IN_port_create_and_add_tail(prt, portno))
         goto err;
     list_add_tail(&prt->list, &ports);
+    load_config(prt->sysdeps.name);
 
     return prt;
 err:

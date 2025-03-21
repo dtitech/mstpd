@@ -7,7 +7,7 @@ mstpd_SOURCES = \
 	bridge_track.c bridge_track.h driver.h bridge_ctl.h libnetlink.c \
 	libnetlink.h mstp.c mstp.h packet.c packet.h netif_utils.c \
 	netif_utils.h ctl_socket_server.c ctl_socket_server.h hmac_md5.c \
-	list.h log.h driver_deps.c
+	list.h log.h driver_deps.c ctl_functions.c ctl_functions.h
 
 mstpctl_SOURCES = \
 	ctl_main.c ctl_socket_client.c ctl_functions.c ctl_socket_client.h \
@@ -49,13 +49,14 @@ mstpdfile=$(sbindir)/mstpd
 mstpctlfile=$(sbindir)/mstpctl
 bridgestpfile=$(sbindir)/bridge-stp
 mstpdpidfile=$(localstatedir)/run/mstpd.pid
+mstpdconfigdir=$(sysconfdir)/mstpd
 bridgestpconffile=$(sysconfdir)/bridge-stp.conf
 ifupdownfile=$(utilsexecdir)/ifupdown.sh
 utilsfuncfile=$(utilsexecdir)/mstpctl-utils-functions.sh
 configbridgefile=$(utilsexecdir)/mstp_config_bridge
 ifqueryfile=$(utilsexecdir)/ifquery
 
-mstpd_CFLAGS += -DMSTPD_PID_FILE='"$(mstpdpidfile)"'
+mstpd_CFLAGS += -DMSTPD_PID_FILE='"$(mstpdpidfile)"' -DMSTPD_CONFIG_DIR='"$(mstpdconfigdir)"'
 
 # See https://www.gnu.org/savannah-checkouts/gnu/autoconf/manual/autoconf-2.69/html_node/Installation-Directory-Variables.html#index-sysconfdir-188
 populate_template = sed \
