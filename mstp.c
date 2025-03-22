@@ -966,20 +966,20 @@ int MSTP_IN_set_cist_bridge_config(bridge_t *br, CIST_BridgeConfig *cfg)
 }
 
 /* 12.8.1.4 Set MSTI Bridge Protocol Parameters */
-int MSTP_IN_set_msti_bridge_config(tree_t *tree, __u8 bridge_priority)
+int MSTP_IN_set_msti_bridge_config(tree_t *tree, __u16 bridge_priority)
 {
     per_tree_port_t *ptp;
     __u8 valuePri;
 
-    if(15 < bridge_priority)
+    if(bridge_priority % 4096)
     {
-        ERROR_BRNAME(tree->bridge,
-                     "MSTI %hu: Bridge Priority must be between 0 and 15",
-                     __be16_to_cpu(tree->MSTID));
-        return -1;
+        INFO_BRNAME(tree->bridge,
+                "MSTI %hu: Bridge Priority %hu not multiple of 4096, truncated to %hu",
+                __be16_to_cpu(tree->MSTID), bridge_priority,
+                (bridge_priority/4096)*4096);
     }
 
-    valuePri = bridge_priority << 4;
+    valuePri = (bridge_priority/4096) << 4;
     if(GET_PRIORITY_FROM_IDENTIFIER(tree->BridgeIdentifier) == valuePri)
         return 0;
     SET_PRIORITY_IN_IDENTIFIER(valuePri, tree->BridgeIdentifier);
@@ -1236,13 +1236,21 @@ int MSTP_IN_set_msti_port_config(per_tree_port_t *ptp, MSTI_PortConfig *cfg)
 
     if(cfg->set_port_priority)
     {
-        if(15 < cfg->port_priority)
+        __u8 newPri = cfg->port_priority;
+        if(240 < newPri)
         {
-            ERROR_MSTINAME(br, prt, ptp,
-                           "Port Priority must be between 0 and 15");
-            return -1;
+            INFO_MSTINAME(br, prt, ptp,
+                    "Port Priority %hhu not between 0 and 240, truncated to 240",
+                    newPri);
+            newPri = 240;
         }
-        valuePri = cfg->port_priority << 4;
+        if((newPri % 16))
+        {
+            INFO_MSTINAME(br, prt, ptp,
+                    "Port Priority %hhu not multiple of 16, truncated to %hhu",
+                    newPri, (newPri/16)*16);
+        }
+        valuePri = (newPri/16) << 4;
         if(GET_PRIORITY_FROM_IDENTIFIER(ptp->portId) != valuePri)
         {
             SET_PRIORITY_IN_IDENTIFIER(valuePri, ptp->portId);
@@ -1252,7 +1260,14 @@ int MSTP_IN_set_msti_port_config(per_tree_port_t *ptp, MSTI_PortConfig *cfg)
 
     if(cfg->set_admin_internal_port_path_cost)
     {
-        ptp->AdminInternalPortPathCost = cfg->admin_internal_port_path_cost;
+        __u32 newCost = cfg->admin_internal_port_path_cost;
+        if(200000000 < newCost)
+        {
+            INFO_MSTINAME(br, prt, ptp,
+                    "treeportcost must be between 0 and 200000000, truncated");
+            newCost = 200000000;
+        }
+        ptp->AdminInternalPortPathCost = newCost;
         new_InternalPathCost = (0 == ptp->AdminInternalPortPathCost) ?
                                  compute_pcost(GET_PORT_SPEED(prt))
                                : ptp->AdminInternalPortPathCost;

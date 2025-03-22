@@ -52,7 +52,7 @@ forces the <bridge> to use specific STP protocol version. mstp is the default.
 sets the <bridge>'s 'transmit hold count' to <tx_hold_count>.
 
 .B mstpctl settreeprio <bridge> <mstid> <priority>
-set <bridge>'s priority for the tree with id = <mstid>, <priority> is between 0 and 15. Bridge priority affects bridge id, lowest priority bridge will be the (regional) root. Note that traditionally bridge priority is a multiple of 4096 and ranges from 0 to 15*4096 = 61440. mstpd is different - it throws out that useless "multiple of 4096" rule and expresses bridge priority in natural units (0-15). Default is 8.
+set <bridge>'s priority for the tree with id = <mstid>, <priority> is between 0 and 65535 and must be a multiple of 4096. Bridge priority affects bridge id, lowest priority bridge will be the (regional) root. Default is 32768.
 
 .B mstpctl setportpathcost <bridge> <port> <cost>
 sets the port cost of the <port> in <bridge> to <cost>. Default is 0 (= auto).
@@ -76,7 +76,7 @@ Enables/disables the restrictions on the <port>'s ability to propagate received 
 Enables/disables the bpduguard configuration of the <port> in <bridge>, default is no.
 
 .B mstpctl settreeportprio <bridge> <port> <mstid> <priority>
-sets the <port>'s priority in <bridge> to <priority> for the MSTI with id = <mstid>. The priority value is a number between 0 and 15. Note that traditionally port priority is a multiple of 16 and ranges from 0 to 15*16 = 240. mstpd is different - it throws out that useless "multiple of 16" rule and expresses port priority in natural units (0-15). Default is 8.
+sets the <port>'s priority in <bridge> to <priority> for the MSTI with id = <mstid>. The priority value is a number between 0 and 240 and is a multiple of 16. Default is 128.
 
 .B mstpctl sethello <bridge> <time>
 sets the <bridge>'s 'hello time' to <time> seconds, default is 2.

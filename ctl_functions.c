@@ -1602,7 +1602,10 @@ static int cmd_setbridgetxholdcount(int argc, char *const *argv)
     int br_index = get_index(argv[1], "bridge");
     if(0 > br_index)
         return br_index;
-    return set_bridge_cfg(tx_hold_count, getuint(argv[2]));
+    unsigned int hold_count = getuint(argv[2]);
+    if (hold_count > 255)
+        hold_count = 255;
+    return set_bridge_cfg(tx_hold_count, hold_count);
 }
 
 static int cmd_setbridgeageing(int argc, char *const *argv)
@@ -1622,8 +1625,8 @@ static int cmd_settreeprio(int argc, char *const *argv)
     if(0 > mstid)
         return mstid;
     unsigned int prio = getuint(argv[3]);
-    if(prio > 255)
-        prio = 255;
+    if(prio > 65535)
+        prio = 65535;
     return CTL_set_msti_bridge_config(br_index,  mstid, prio);
 }
 
@@ -1635,7 +1638,10 @@ static int cmd_setportpathcost(int argc, char *const *argv)
     int port_index = get_index(argv[2], "port");
     if(0 > port_index)
         return port_index;
-    return set_port_cfg(admin_external_port_path_cost, getuint(argv[3]));
+    unsigned int path_cost = getuint(argv[3]);
+    if(path_cost > 210000000)
+        path_cost = 210000000;
+    return set_port_cfg(admin_external_port_path_cost, path_cost);
 }
 
 static int cmd_setportadminedge(int argc, char *const *argv)
@@ -1767,7 +1773,10 @@ static int cmd_settreeportcost(int argc, char *const *argv)
     int mstid = get_id(argv[3], "mstid", MAX_MSTID);
     if(0 > mstid)
         return mstid;
-    return set_tree_port_cfg(admin_internal_port_path_cost, getuint(argv[4]));
+    unsigned int path_cost = getuint(argv[4]);
+    if(path_cost > 210000000)
+        path_cost = 210000000;
+    return set_tree_port_cfg(admin_internal_port_path_cost, path_cost);
 }
 
 static int cmd_portmcheck(int argc, char *const *argv)
@@ -1783,7 +1792,10 @@ static int cmd_portmcheck(int argc, char *const *argv)
 
 static int cmd_debuglevel(int argc, char *const *argv)
 {
-    return CTL_set_debug_level(getuint(argv[1]));
+    unsigned int level = getuint(argv[1]);
+    if (level > 4)
+        level = 4;
+    return CTL_set_debug_level(level);
 }
 
 static int do_showmstilist_fmt_plain(const char *br_name,
@@ -2281,7 +2293,7 @@ static const struct command commands[] =
      "<bridge> <mstid>", "Delete existing MSTI"},
     {3, 0, "settreeprio", cmd_settreeprio,
      "<bridge> <mstid> <priority>",
-     "Set bridge priority (0-15) for the given MSTI"},
+     "Set bridge priority (0-65535) for the given MSTI"},
     /* Set global port */
     {3, 0, "setportpathcost", cmd_setportpathcost,
      "<bridge> <port> <cost>",
@@ -2304,7 +2316,7 @@ static const struct command commands[] =
     /* Set tree port */
     {4, 0, "settreeportprio", cmd_settreeportprio,
      "<bridge> <port> <mstid> <priority>",
-     "Set port priority (0-15) for the given MSTI"},
+     "Set port priority (0-240) for the given MSTI"},
     {4, 0, "settreeportcost", cmd_settreeportcost,
      "<bridge> <port> <mstid> <cost>",
      "Set port internal path cost for the given MSTI (0 = auto)"},
@@ -2316,7 +2328,7 @@ static const struct command commands[] =
      "<bridge> <port> {yes|no}", "Set BPDU filter state"},
 
     /* Other */
-    {1, 0, "debuglevel", cmd_debuglevel, "<level>", "Level of verbosity"},
+    {1, 0, "debuglevel", cmd_debuglevel, "<level>", "Level of verbosity (1-4)"},
 };
 
 static const struct command *command_lookup(const char *cmd)

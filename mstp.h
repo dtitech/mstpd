@@ -645,7 +645,7 @@ typedef struct
     bool set_bridge_forward_delay;
 
     /* Superseded by MSTP_IN_set_msti_bridge_config for the CIST.
-     * __u8 bridge_priority;
+     * __u16 bridge_priority;
      * bool set_bridge_priority; */
 
     protocol_version_t protocol_version;
@@ -669,7 +669,7 @@ int MSTP_IN_set_cist_bridge_config(bridge_t *br, CIST_BridgeConfig *cfg);
 /* 12.8.1.4 Set MSTI Bridge Protocol Parameters */
     /* No need in special structure for single parameter Bridge Priority */
 
-int MSTP_IN_set_msti_bridge_config(tree_t *tree, __u8 bridge_priority);
+int MSTP_IN_set_msti_bridge_config(tree_t *tree, __u16 bridge_priority);
 
 /* 12.8.2.1 Read CIST Port Parameters */
 typedef struct
