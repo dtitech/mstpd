@@ -48,13 +48,13 @@
 static LIST_HEAD(bridges);
 static LIST_HEAD(ports);
 
-static void load_config(const char *ifname)
+static void load_br_config(const char *brname)
 {
     char fname[128];
     FILE *config_file;
     int rc;
 
-    snprintf(fname, sizeof(fname), MSTPD_CONFIG_DIR "/%s.conf", ifname);
+    snprintf(fname, sizeof(fname), MSTPD_CONFIG_DIR "/%s.conf", brname);
 
     config_file = fopen(fname, "rb");
     if (!config_file) {
@@ -64,7 +64,9 @@ static void load_config(const char *ifname)
 
     rc = process_batch_cmds(config_file, true, false);
     if (rc)
-	    INFO("Failed applying config for %s: %i", ifname, rc);
+	    INFO("Config applied for %s", brname);
+    else
+	    INFO("Failed applying config for %s: %i", brname, rc);
 
     fclose(config_file);
 }
@@ -86,7 +88,7 @@ static bridge_t * create_br(int if_index)
         goto err;
 
     list_add_tail(&br->list, &bridges);
-    load_config(br->sysdeps.name);
+    load_br_config(br->sysdeps.name);
     return br;
 err:
     free(br);
@@ -102,6 +104,29 @@ static bridge_t * find_br(int if_index)
             return br;
     }
     return NULL;
+}
+
+static void load_if_config(const char *brname, const char *ifname)
+{
+    char fname[128];
+    FILE *config_file;
+    int rc;
+
+    snprintf(fname, sizeof(fname), MSTPD_CONFIG_DIR "/%s/%s.conf", brname, ifname);
+
+    config_file = fopen(fname, "rb");
+    if (!config_file) {
+	    LOG("Failed to open %s", fname);
+	    return;
+    }
+
+    rc = process_batch_cmds(config_file, true, false);
+    if (!rc)
+	    INFO("Config applied for %s in %s", ifname, brname);
+    else
+	    INFO("Failed applying config for %s in %s: %i", ifname, brname, rc);
+
+    fclose(config_file);
 }
 
 static port_t * create_if(bridge_t * br, int if_index)
@@ -137,7 +162,7 @@ static port_t * create_if(bridge_t * br, int if_index)
     if(!MSTP_IN_port_create_and_add_tail(prt, portno))
         goto err;
     list_add_tail(&prt->list, &ports);
-    load_config(prt->sysdeps.name);
+    load_if_config(br->sysdeps.name, prt->sysdeps.name);
 
     return prt;
 err:
