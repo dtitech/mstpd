@@ -36,6 +36,7 @@
 #include <linux/if_ether.h>
 #include <linux/ethtool.h>
 #include <linux/sockios.h>
+#include <errno.h>
 
 #include "log.h"
 
@@ -114,7 +115,17 @@ int ethtool_get_speed_duplex(char *ifname, int *speed, int *duplex)
     ifr.ifr_data = (caddr_t)&ecmd;
     if(0 > ioctl(netsock, SIOCETHTOOL, &ifr))
     {
-        ERROR("Cannot get speed/duplex for %s: %m\n", ifname);
+        /* for vxlan device since duplex/speed is not set,
+         * hardcode to full duplex/10G for now, eopnotsupp
+         * error code can be used as an indication for this case.
+         */
+        if (errno == EOPNOTSUPP) {
+            LOG("unsupported: get speed/duplex for %s: %m\n", ifname);
+            *speed = 10000;
+            *duplex = 1;
+            return 0;
+        }
+        INFO("Cannot get speed/duplex for %s: %m\n", ifname);
         return -1;
     }
     *speed = ethtool_cmd_speed(&ecmd); /* Ethtool speed is in Mbps */
