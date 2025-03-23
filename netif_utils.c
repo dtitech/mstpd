@@ -154,6 +154,41 @@ bool is_bridge(char *if_name)
     return (0 == access(path, R_OK));
 }
 
+int get_bridge_stpstate(const char *if_name)
+{
+    char path[32 + IFNAMSIZ];
+    sprintf(path, SYSFS_CLASS_NET "/%s/bridge/stp_state", if_name);
+    char buf[128];
+    int fd;
+    long res = -1;
+    TSTM((fd = open(path, O_RDONLY)) >= 0, -1, "%m");
+    int l;
+    TSTM((l = read(fd, buf, sizeof(buf) - 1)) >= 0, -1, "%m");
+    if(0 == l)
+    {
+        ERROR("Empty stp_state file");
+        goto out;
+    }
+    else if((sizeof(buf) - 1) == l)
+    {
+        ERROR("stp_state file too long");
+        goto out;
+    }
+    buf[l] = 0;
+    if('\n' == buf[l - 1])
+        buf[l - 1] = 0;
+    char *end;
+    res = strtoul(buf, &end, 0);
+    if(0 != *end || INT_MAX < res)
+    {
+      ERROR("Invalid stp_state %s", buf);
+      res = -1;
+    }
+out:
+    close(fd);
+    return res;
+}
+
 int get_bridge_portno(char *if_name)
 {
     char path[32 + IFNAMSIZ];

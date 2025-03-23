@@ -48,6 +48,15 @@
 static LIST_HEAD(bridges);
 static LIST_HEAD(ports);
 
+static bool exist_br_config(const char *brname)
+{
+    char fname[128];
+
+    snprintf(fname, sizeof(fname), MSTPD_CONFIG_DIR "/%s.conf", brname);
+
+    return (0 == access(fname, R_OK));
+}
+
 static void load_br_config(const char *brname)
 {
     char fname[128];
@@ -361,8 +370,57 @@ static void set_if_up(port_t *prt, bool up)
     }
 }
 
+int bridge_try_autoadd(const char *br_name)
+{
+    struct dirent **namelist;
+    int j, state, res, ifcount;
+    int br_array[2];
+    int *ifaces_list;
+
+    if(!handle_all_bridges && !exist_br_config(br_name))
+    {
+        INFO("No config file for bridge %s, ignored", br_name);
+        return -2;
+    }
+
+    if(0 > (state = get_bridge_stpstate(br_name)))
+        return -2;
+
+    if(state != 2)
+    {
+        INFO("Bridge %s do not have userspace STP active, ignored", br_name);
+        return -2;
+    }
+
+    br_array[0] = 1;
+    br_array[1] = get_index(br_name, "bridge");
+
+    if(0 > (ifcount = get_port_list(br_name, &namelist)))
+    {
+        return ifcount;
+    }
+
+    if(NULL == (ifaces_list = malloc((ifcount + 1) * sizeof(int))))
+    {
+        return -1;
+    }
+
+    ifaces_list[0] = ifcount;
+    for (j = 1; j <= ifcount; ++j)
+    {
+        ifaces_list[j] = get_index(namelist[j - 1]->d_name, "port");
+        free(namelist[j - 1]);
+    }
+    free(namelist);
+
+    res = CTL_add_bridges(br_array, &ifaces_list);
+
+    free(ifaces_list);
+    return res;
+}
+
 /* br_index == if_index means: interface is bridge master */
-int bridge_notify(int br_index, int if_index, bool newlink, unsigned flags)
+int bridge_notify(int br_index, int if_index, const char *if_name, bool newlink, unsigned flags)
 {
     port_t *prt;
     bridge_t *br = NULL, *other_br;
@@ -437,8 +495,12 @@ int bridge_notify(int br_index, int if_index, bool newlink, unsigned flags)
             if(br_index == if_index)
             {
                 if(!(br = find_br(br_index)))
-                    return -2; /* bridge not in list */
-                set_br_up(br, up);
+                {
+                    /* Bridge not in list, try autoadd */
+                    return bridge_try_autoadd(if_name);
+                }
+                else
+                    set_br_up(br, up);
             }
         }
     }

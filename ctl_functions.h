@@ -29,6 +29,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <dirent.h>
 
 #include <netinet/in.h>
 #include <linux/if_bridge.h>
@@ -522,6 +523,9 @@ struct command
     const char *format;
     const char *help;
 };
+
+int get_index(const char *ifname, const char *doc);
+int get_port_list(const char *br_ifname, struct dirent ***namelist);
 
 const struct command *command_lookup_and_validate(int argc, char *const *argv,
                                                   int line_num);

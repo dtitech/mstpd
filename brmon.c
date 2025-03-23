@@ -59,6 +59,7 @@ static struct epoll_event_handler br_handler;
 
 struct rtnl_handle rth_state;
 
+bool handle_all_bridges = 1;
 bool have_per_vlan_state = 1;
 
 static int dump_br_msg(struct nlmsghdr *n, void *arg)
@@ -163,7 +164,7 @@ static int dump_br_msg(struct nlmsghdr *n, void *arg)
     else
         br_index = -1;
 
-    bridge_notify(br_index, ifi->ifi_index, newlink, ifi->ifi_flags);
+    bridge_notify(br_index, ifi->ifi_index, (char*)RTA_DATA(tb[IFLA_IFNAME]), newlink, ifi->ifi_flags);
 
     return 0;
 }
@@ -333,7 +334,7 @@ int init_bridge_ops(void)
         return -1;
     }
 
-    if(rtnl_linkdump_req(&rth, PF_BRIDGE) < 0)
+    if(rtnl_linkdump_req(&rth, PF_PACKET) < 0)
     {
         ERROR("Cannot send dump request: %m\n");
         return -1;

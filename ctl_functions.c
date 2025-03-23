@@ -26,7 +26,6 @@
 
 #include <string.h>
 #include <getopt.h>
-#include <dirent.h>
 #include <errno.h>
 #include <limits.h>
 #include <sys/stat.h>
@@ -50,7 +49,7 @@ static int get_index_die(const char *ifname, const char *doc, bool die)
     return r;
 }
 
-static inline int get_index(const char *ifname, const char *doc)
+int get_index(const char *ifname, const char *doc)
 {
     return get_index_die(ifname, doc, true);
 }
@@ -1155,7 +1154,7 @@ static int not_dot_dotdot(const struct dirent *entry)
     return !('.' == n[0] && (0 == n[1] || ('.' == n[1] && 0 == n[2])));
 }
 
-static int get_port_list(const char *br_ifname, struct dirent ***namelist)
+int get_port_list(const char *br_ifname, struct dirent ***namelist)
 {
     int res;
     char buf[SYSFS_PATH_MAX];

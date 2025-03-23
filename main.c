@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
     int c;
     int daemonize = 1;
 
-    while((c = getopt(argc, argv, "Vdsv:")) != -1)
+    while((c = getopt(argc, argv, "Vdsmv:")) != -1)
     {
         switch (c)
         {
@@ -126,6 +126,9 @@ int main(int argc, char *argv[])
                 break;
             case 's':
                 print_to_syslog = 1;
+                break;
+            case 'm':
+                handle_all_bridges = 0;
                 break;
             case 'v':
             {

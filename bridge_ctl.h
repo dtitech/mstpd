@@ -85,11 +85,12 @@ typedef struct
 
 extern struct rtnl_handle rth_state;
 
+extern bool handle_all_bridges;
 extern bool have_per_vlan_state;
 
 int init_bridge_ops(void);
 
-int bridge_notify(int br_index, int if_index, bool newlink, unsigned flags);
+int bridge_notify(int br_index, int if_index, const char *if_name, bool newlink, unsigned flags);
 
 void bridge_bpdu_rcv(int ifindex, const unsigned char *data, int len);
 
