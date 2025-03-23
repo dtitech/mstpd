@@ -63,7 +63,7 @@ static void load_br_config(const char *brname)
     }
 
     rc = process_batch_cmds(config_file, true, false);
-    if (rc)
+    if (!rc)
 	    INFO("Config applied for %s", brname);
     else
 	    INFO("Failed applying config for %s: %i", brname, rc);
