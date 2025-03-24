@@ -90,15 +90,18 @@ static inline void do_arraynext_fmt(void)
 
 #define GET_NUM_FROM_PRIO(p) (__be16_to_cpu(p) & 0x0FFF)
 
-#define BR_ID_FMT "%01hhX.%03hX.%02hhX:%02hhX:%02hhX:%02hhX:%02hhX:%02hhX"
-#define BR_ID_ARGS(x) ((GET_PRIORITY_FROM_IDENTIFIER(x) >> 4) & 0x0F), \
+#define STDPRIO_FROM_ID(x) \
+    (((unsigned int)GET_PRIORITY_FROM_IDENTIFIER(x) >> 4) * 4096)
+
+#define BR_ID_FMT "%04hX.%02hhX:%02hhX:%02hhX:%02hhX:%02hhX:%02hhX"
+#define BR_ID_ARGS(x) ((unsigned int)GET_PRIORITY_FROM_IDENTIFIER(x) << 8) | \
     GET_NUM_FROM_PRIO((x).s.priority), \
     x.s.mac_address[0], x.s.mac_address[1], x.s.mac_address[2], \
     x.s.mac_address[3], x.s.mac_address[4], x.s.mac_address[5]
 
-#define PRT_ID_FMT "%01hhX.%03hX"
-#define PRT_ID_ARGS(x) ((GET_PRIORITY_FROM_IDENTIFIER(x) >> 4) & 0x0F), \
-                       GET_NUM_FROM_PRIO(x)
+#define PRT_ID_FMT "%04hX"
+#define PRT_ID_ARGS(x) (((unsigned int)GET_PRIORITY_FROM_IDENTIFIER(x) << 8) | \
+    GET_NUM_FROM_PRIO(x))
 
 #define BOOL_STR(x) ((x) ? "yes" : "no")
 #define PROTO_VERS_STR(x)   ((protoRSTP == (x)) ? "rstp" : \
@@ -206,21 +209,23 @@ static int do_showbridge_fmt_plain(const CIST_BridgeStatus *s,
     switch(param_id)
     {
         case PARAM_NULL:
+            root_portno = GET_NUM_FROM_PRIO(s->root_port_id);
             printf("%s CIST info\n", br_name);
-            printf("  enabled         %s\n", BOOL_STR(s->enabled));
-            printf("  bridge id       "BR_ID_FMT"\n",
-                   BR_ID_ARGS(s->bridge_id));
-            printf("  designated root "BR_ID_FMT"\n",
-                   BR_ID_ARGS(s->designated_root));
-            printf("  regional root   "BR_ID_FMT"\n",
-                   BR_ID_ARGS(s->regional_root));
-            printf("  root port       ");
-            if(0 != (root_portno = GET_NUM_FROM_PRIO(s->root_port_id)))
-                printf("%s (#%u)\n", root_port_name, root_portno);
-            else
-                printf("none\n");
-            printf("  path cost     %-10u ", s->root_path_cost);
-            printf("internal path cost   %u\n", s->internal_path_cost);
+            printf("  Enabled       %s\n", BOOL_STR(s->enabled));
+            printf("  Bridge        "BR_ID_FMT"   priority      %10u\n",
+                   BR_ID_ARGS(s->bridge_id),
+                   STDPRIO_FROM_ID(s->bridge_id));
+            printf("  Root          "BR_ID_FMT"   priority      %10u\n",
+                   BR_ID_ARGS(s->designated_root),
+                   STDPRIO_FROM_ID(s->designated_root));
+            printf("                port %-17s   cost          %10u\n",
+                   (0 != root_portno) ? root_port_name : "none",
+                   s->root_path_cost);
+            printf("  Regional Root "BR_ID_FMT"   priority      %10u\n",
+                   BR_ID_ARGS(s->regional_root),
+                   STDPRIO_FROM_ID(s->regional_root));
+            printf("                                         internal cost %10u\n",
+                   s->internal_path_cost);
             printf("  max age       %-10hhu ", s->root_max_age);
             printf("bridge max age       %hhu\n", s->bridge_max_age);
             printf("  forward delay %-10hhu ", s->root_forward_delay);
@@ -255,10 +260,9 @@ static int do_showbridge_fmt_plain(const CIST_BridgeStatus *s,
             printf(BR_ID_FMT"\n", BR_ID_ARGS(s->regional_root));
             break;
         case PARAM_ROOTPORT:
-            if(0 != (root_portno = GET_NUM_FROM_PRIO(s->root_port_id)))
-                printf("%s\n", root_port_name);
-            else
-                printf("\n");
+            root_portno = GET_NUM_FROM_PRIO(s->root_port_id);
+            printf("%s\n",
+                   (0 != root_portno) ? root_port_name : "none");
             break;
         case PARAM_PATHCOST:
             printf("%u\n", s->root_path_cost);
@@ -319,6 +323,8 @@ static int do_showbridge_fmt_json(const CIST_BridgeStatus *s,
     switch(param_id)
     {
         case PARAM_NULL:
+            root_portno = GET_NUM_FROM_PRIO(s->root_port_id);
+
             printf("{");
             printf("\"bridge\":\"%s\",", br_name);
             printf("\"enabled\":\"%s\",", BOOL_STR(s->enabled));
@@ -328,11 +334,8 @@ static int do_showbridge_fmt_json(const CIST_BridgeStatus *s,
                    BR_ID_ARGS(s->designated_root));
             printf("\"regional-root\":\""BR_ID_FMT"\",",
                    BR_ID_ARGS(s->regional_root));
-            if(0 != (root_portno = GET_NUM_FROM_PRIO(s->root_port_id)))
-                printf("\"root-port\":\"%s (#%u)\",",
-                       root_port_name, root_portno);
-            else
-                printf("\"root-port\":\"\",");
+            printf("\"root-port\":\"%s\",",
+                   (0 != root_portno) ? root_port_name : "");
             printf("\"path-cost\":\"%u\",", s->root_path_cost);
             printf("\"internal-path-cost\":\"%u\",",
                    s->internal_path_cost);
@@ -514,17 +517,18 @@ static int do_showtree_fmt_plain(const MSTI_BridgeStatus *s,
                                  int mstid,
                                  const char *root_port_name)
 {
-    unsigned int root_portno;
+    unsigned int root_portno = GET_NUM_FROM_PRIO(s->root_port_id);
 
     printf("%s MSTI %hu info\n", br_name, (unsigned short)mstid);
-    printf("  bridge id          "BR_ID_FMT"\n", BR_ID_ARGS(s->bridge_id));
-    printf("  regional root      "BR_ID_FMT"\n", BR_ID_ARGS(s->regional_root));
-    printf("  root port          ");
-    if(0 != (root_portno = GET_NUM_FROM_PRIO(s->root_port_id)))
-        printf("%s (#%u)\n", root_port_name, root_portno);
-    else
-        printf("none\n");
-    printf("  internal path cost %u\n", s->internal_path_cost);
+    printf("  Bridge        "BR_ID_FMT"   priority      %10u\n",
+           BR_ID_ARGS(s->bridge_id),
+           STDPRIO_FROM_ID(s->bridge_id));
+    printf("  Regional Root "BR_ID_FMT"   priority      %10u\n",
+           BR_ID_ARGS(s->regional_root),
+           STDPRIO_FROM_ID(s->regional_root));
+    printf("                port %-17s   internal cost %10u\n",
+           (0 != root_portno) ? root_port_name : "none",
+           s->internal_path_cost);
     printf("  time since topology change %u\n", s->time_since_topology_change);
     printf("  topology change count      %u\n", s->topology_change_count);
     printf("  topology change            %s\n", BOOL_STR(s->topology_change));
@@ -539,7 +543,7 @@ static int do_showtree_fmt_json(const MSTI_BridgeStatus *s,
                                 int mstid,
                                 const char *root_port_name)
 {
-    unsigned int root_portno;
+    unsigned int root_portno = GET_NUM_FROM_PRIO(s->root_port_id);
 
     printf("{");
     printf("\"bridge\":\"%s\",", br_name);
@@ -548,11 +552,8 @@ static int do_showtree_fmt_json(const MSTI_BridgeStatus *s,
            BR_ID_ARGS(s->bridge_id));
     printf("\"regional-root\":\""BR_ID_FMT"\",",
            BR_ID_ARGS(s->regional_root));
-    printf("\"root-port\":");
-    if(0 != (root_portno = GET_NUM_FROM_PRIO(s->root_port_id)))
-        printf("\"%s (#%u)\",", root_port_name, root_portno);
-    else
-        printf("\"none\",");
+    printf("\"root-port\":\"%s\",",
+           (0 != root_portno) ? root_port_name : "");
     printf("\"internal-path-cost\":\"%u\",",
            s->internal_path_cost);
     printf("\"time-since-topology-change\":\"%u\",",
@@ -732,7 +733,7 @@ static int do_showport_fmt_plain(const CIST_PortStatus *s,
                 printf("%s:%s CIST info\n", bridge_name, port_name);
                 printf("  enabled            %-23s ", BOOL_STR(s->enabled));
                 printf("role                 %s\n", ROLE_STR(s->role));
-                printf("  port id            "PRT_ID_FMT"                   ",
+                printf("  port id            "PRT_ID_FMT"                    ",
                        PRT_ID_ARGS(s->port_id));
                 printf("state                %s\n", STATE_STR(s->state));
                 printf("  external port cost %-23u ",
@@ -743,15 +744,15 @@ static int do_showport_fmt_plain(const CIST_PortStatus *s,
                        s->internal_port_path_cost);
                 printf("admin internal cost  %u\n",
                        s->admin_internal_port_path_cost);
-                printf("  designated root    "BR_ID_FMT" ",
+                printf("  designated root    "BR_ID_FMT"  ",
                        BR_ID_ARGS(s->designated_root));
                 printf("dsgn external cost   %u\n",
                        s->designated_external_cost);
-                printf("  dsgn regional root "BR_ID_FMT" ",
+                printf("  dsgn regional root "BR_ID_FMT"  ",
                        BR_ID_ARGS(s->designated_regional_root));
                 printf("dsgn internal cost   %u\n",
                        s->designated_internal_cost);
-                printf("  designated bridge  "BR_ID_FMT" ",
+                printf("  designated bridge  "BR_ID_FMT"  ",
                        BR_ID_ARGS(s->designated_bridge));
                 printf("designated port      "PRT_ID_FMT"\n",
                        PRT_ID_ARGS(s->designated_port));
@@ -1304,10 +1305,10 @@ static int do_showtreeport_fmt_plain(const MSTI_PortStatus *s,
     printf("disputed             %s\n", BOOL_STR(s->disputed));
     printf("  internal port cost %-23u ", s->internal_port_path_cost);
     printf("admin internal cost  %u\n", s->admin_internal_port_path_cost);
-    printf("  dsgn regional root "BR_ID_FMT" ",
+    printf("  dsgn regional root "BR_ID_FMT"  ",
            BR_ID_ARGS(s->designated_regional_root));
     printf("dsgn internal cost   %u\n", s->designated_internal_cost);
-    printf("  designated bridge  "BR_ID_FMT" ",
+    printf("  designated bridge  "BR_ID_FMT"  ",
            BR_ID_ARGS(s->designated_bridge));
     printf("designated port      "PRT_ID_FMT"\n",
            PRT_ID_ARGS(s->designated_port));
