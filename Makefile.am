@@ -32,7 +32,6 @@ dist_doc_DATA = LICENSE
 utilsexec_SCRIPTS = utils/ifupdown.sh utils/mstp_config_bridge
 dist_utilsexec_DATA = utils/mstpctl-utils-functions.sh
 sbin_SCRIPTS = bridge-stp
-dist_sysconf_DATA = bridge-stp.conf
 dist_man_MANS = utils/mstpctl.8 utils/mstpctl-utils-interfaces.5
 
 AM_DISTCHECK_CONFIGURE_FLAGS = --exec_prefix=$$dc_install_base \
@@ -50,7 +49,7 @@ mstpctlfile=$(sbindir)/mstpctl
 bridgestpfile=$(sbindir)/bridge-stp
 mstpdpidfile=$(localstatedir)/run/mstpd.pid
 mstpdconfigdir=$(sysconfdir)/mstpd
-bridgestpconffile=$(sysconfdir)/bridge-stp.conf
+bridgestpconffile=$(sysconfdir)/default/mstpd
 ifupdownfile=$(utilsexecdir)/ifupdown.sh
 utilsfuncfile=$(utilsexecdir)/mstpctl-utils-functions.sh
 configbridgefile=$(utilsexecdir)/mstp_config_bridge
@@ -102,6 +101,8 @@ install-exec-hook:
 	ln -sf $(sbindir)/bridge-stp $(utilsdest)/mstpctl_restart_config
 	$(IFUPDOWN_SCRIPT_INSTALL_CMDS)
 	$(MKDIR_P) $(bashcompdest)
+	$(MKDIR_P) $(etcdest)/default ; \
+	$(INSTALL_DATA) $(srcdir)/mstpd.conf $(etcdest)/default/mstpd
 	$(INSTALL_DATA) $(srcdir)/utils/bash_completion $(bashcompdest)/mstpctl
 	if [ -n "$(systemdunitdir)" ]; then \
 	  $(MKDIR_P) $(systemdunitdest) ; \

@@ -10,7 +10,7 @@ AC_INIT([mstpd], [0.1.0], [https://github.com/mstpd/mstpd])
 # just do it manually.
 test "x$exec_prefix" = xNONE && exec_prefix=''
 
-# bridge-stp.conf should be installed in /etc/ rather than /usr/local/etc/ by
+# mstpd should be installed in /etc/default/ rather than /usr/local/etc/default/ by
 # default.  If `./configure` was run without specifying `--prefix=...` or
 # `--sysconfdir=...`, then set the default sysconfdir appropriately.
 # There is no standard macro to override the default sysconfdir, so just do it

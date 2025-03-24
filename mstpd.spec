@@ -117,7 +117,7 @@ END
 %{_sbindir}/mstpctl
 %{_sbindir}/bridge-stp
 %{_sbindir}/mstp_restart
-%config(noreplace) %{_sysconfdir}/bridge-stp.conf
+%config(noreplace) %{_sysconfdir}/default/mstpd
 %config(noreplace) %{_sysconfdir}/sysconfig/network-scripts/bridge-stp
 %{_sysconfdir}/bash_completion.d/mstpctl
 %{_unitdir}/mstpd.service
