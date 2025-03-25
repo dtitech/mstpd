@@ -96,7 +96,7 @@ void bridge_bpdu_rcv(int ifindex, const unsigned char *data, int len);
 
 void bridge_one_second(void);
 
-int vlan_notify(int if_index, bool newvlan, __u16 vid, __u8 state);
+int bridge_vlan_notify(int if_index, bool newvlan, __u16 vid, __u8 state);
 
 int fill_vlan_table(sysdep_if_data_t *if_data);
 

@@ -509,7 +509,7 @@ int bridge_notify(int br_index, int if_index, const char *if_name, bool newlink,
 
 static int br_set_vlan_state(struct rtnl_handle *rth, unsigned ifindex, __u16 vid, __u8 state);
 
-int vlan_notify(int if_index, bool newvlan, __u16 vid, __u8 state)
+int bridge_vlan_notify(int if_index, bool newvlan, __u16 vid, __u8 state)
 {
     per_tree_port_t *ptp;
     bridge_t *br = NULL;
@@ -758,22 +758,20 @@ void MSTP_OUT_set_state(per_tree_port_t *ptp, int new_state)
 
     if(have_per_vlan_state)
     {
-        int i;
-
-        for (i = 1; i <= MAX_VID; i++)
+        for (int vid = 1; vid <= MAX_VID; vid++)
         {
-            __u16 fid = br->vid2fid[i];
+            __u16 fid = br->vid2fid[vid];
 
             if (br->fid2mstid[fid] != ptp->MSTID)
                 continue;
 
-            if (prt->sysdeps.vlan_state[i] == VLAN_STATE_UNASSIGNED)
+            if (prt->sysdeps.vlan_state[vid] == VLAN_STATE_UNASSIGNED)
                 continue;
 
-            if(0 > br_set_vlan_state(&rth_state, prt->sysdeps.if_index, i, ptp->state))
+            if(0 > br_set_vlan_state(&rth_state, prt->sysdeps.if_index, vid, ptp->state))
                ERROR_PRTNAME(br, prt, "Couldn't set kernel bridge state %s for vid %i",
-                             state_name, i);
-            prt->sysdeps.vlan_state[i] = new_state;
+                             state_name, vid);
+            prt->sysdeps.vlan_state[vid] = new_state;
         }
     }
     else if(0 == ptp->MSTID)
@@ -799,20 +797,19 @@ void MSTP_OUT_flush_all_fids(per_tree_port_t * ptp)
     /* Translate CIST flushing to the kernel bridge code */
     if(have_per_vlan_state)
     {
-        int i;
-
-        for (i = 1; i <= MAX_VID; i++)
+        for (int vid = 1; vid <= MAX_VID; vid++)
         {
-            __u16 fid = br->vid2fid[i];
+            __u16 fid = br->vid2fid[vid];
 
             if (br->fid2mstid[fid] != ptp->MSTID)
                 continue;
 
-            if (prt->sysdeps.vlan_state[i] == VLAN_STATE_UNASSIGNED)
+            if (prt->sysdeps.vlan_state[vid] == VLAN_STATE_UNASSIGNED)
                 continue;
 
-            if(0 > br_flush_port(&rth_state, br->sysdeps.if_index, prt->sysdeps.if_index, i))
-               ERROR_PRTNAME(br, prt, "Couldn't flush kernel bridge forwarding database for vid %i", i);
+            if(0 > br_flush_port(&rth_state, br->sysdeps.if_index, prt->sysdeps.if_index, vid))
+               ERROR_PRTNAME(br, prt,
+                             "Couldn't flush kernel bridge forwarding database for vid %i", vid);
         }
     }
     else if(0 == ptp->MSTID)

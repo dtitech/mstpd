@@ -182,7 +182,6 @@ static int dump_vlan_msg(struct nlmsghdr *n, void *arg)
         struct bridge_vlan_info *info = NULL;
         uint8_t state = VLAN_STATE_UNASSIGNED;
         uint16_t range = 0;
-        uint16_t i;
 
         if ((pos->rta_type & NLA_TYPE_MASK) != BRIDGE_VLANDB_ENTRY)
             continue;
@@ -202,8 +201,8 @@ static int dump_vlan_msg(struct nlmsghdr *n, void *arg)
         if (!range)
             range = info->vid;
 
-        for (i = info->vid;  i <= range; i++)
-            vlan_notify(bvm->ifindex, newvlan, i, state);
+        for (uint16_t vid = info->vid; vid <= range; vid++)
+            bridge_vlan_notify(bvm->ifindex, newvlan, vid, state);
     }
 
     return 0;
@@ -214,7 +213,7 @@ struct vlan_dump_table {
     uint8_t *table;
 };
 
-static int vlan_table_msg(struct nlmsghdr *n, void *arg)
+static int fill_vlan_table_msg(struct nlmsghdr *n, void *arg)
 {
     struct br_vlan_msg *bvm = NLMSG_DATA(n);
     struct rtattr *pos;
@@ -297,7 +296,7 @@ int fill_vlan_table(sysdep_if_data_t *if_data)
         return -1;
     }
 
-    if(rtnl_dump_filter(&rth_state, vlan_table_msg, if_data) < 0)
+    if(rtnl_dump_filter(&rth_state, fill_vlan_table_msg, if_data) < 0)
     {
         ERROR("Dump terminated\n");
         return -1;
