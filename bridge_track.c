@@ -86,11 +86,15 @@ static bridge_t * create_br(int if_index)
     TST((br = calloc(1, sizeof(*br))) != NULL, NULL);
 
     /* Init system dependent info */
+    br->sysdeps.type = SYSDEP_BR;
     br->sysdeps.if_index = if_index;
     if (!index_to_name(if_index, br->sysdeps.name))
         goto err;
     if (get_hwaddr(br->sysdeps.name, br->sysdeps.macaddr))
         goto err;
+
+    memset(br->sysdeps.vlan_state, VLAN_STATE_UNASSIGNED, sizeof(br->sysdeps.vlan_state));
+    fill_vlan_table((sysdep_uni_data_t *)&br->sysdeps);
 
     INFO("Add bridge %s", br->sysdeps.name);
     if(!MSTP_IN_bridge_create(br, br->sysdeps.macaddr))
@@ -144,6 +148,7 @@ static port_t * create_if(bridge_t * br, int if_index)
     TST((prt = calloc(1, sizeof(*prt))) != NULL, NULL);
 
     /* Init system dependent info */
+    prt->sysdeps.type = SYSDEP_IF;
     prt->sysdeps.if_index = if_index;
     if (!index_to_port_name(if_index, prt->sysdeps.name))
         goto err;
@@ -163,7 +168,7 @@ static port_t * create_if(bridge_t * br, int if_index)
     }
 
     memset(prt->sysdeps.vlan_state, VLAN_STATE_UNASSIGNED, sizeof(prt->sysdeps.vlan_state));
-    fill_vlan_table(&prt->sysdeps);
+    fill_vlan_table((sysdep_uni_data_t *)&prt->sysdeps);
 
     INFO("Add iface %s as port#%d to bridge %s", prt->sysdeps.name,
          portno, br->sysdeps.name);
@@ -519,6 +524,13 @@ int bridge_vlan_notify(int if_index, bool newvlan, __u16 vid, __u8 state)
 
     LOG("if_index %d, newvlan %d, vid %d, state %d",
         if_index, newvlan, vid, state);
+
+    br = find_br(if_index);
+    if (br)
+      {
+        br->sysdeps.vlan_state[vid] = state;
+        return 0;
+      }
 
     prt = find_if(NULL, if_index);
     if (!prt)

@@ -208,19 +208,14 @@ static int dump_vlan_msg(struct nlmsghdr *n, void *arg)
     return 0;
 }
 
-struct vlan_dump_table {
-    int if_index;
-    uint8_t *table;
-};
-
 static int fill_vlan_table_msg(struct nlmsghdr *n, void *arg)
 {
     struct br_vlan_msg *bvm = NLMSG_DATA(n);
     struct rtattr *pos;
     int len = n->nlmsg_len - NLMSG_LENGTH(sizeof(*bvm));
-    sysdep_if_data_t *if_data = arg;
+    sysdep_uni_data_t *uni_data = arg;
 
-    if (bvm->ifindex != if_data->if_index)
+    if (bvm->ifindex != uni_data->if_index)
             return 0;
 
     for (pos = NLMSG_DATA(n) + NLMSG_ALIGN(sizeof(*bvm)); RTA_OK(pos, len); pos = RTA_NEXT(pos, len))
@@ -229,7 +224,6 @@ static int fill_vlan_table_msg(struct nlmsghdr *n, void *arg)
         struct bridge_vlan_info *info = NULL;
         uint8_t state = VLAN_STATE_UNASSIGNED;
         uint16_t range = 0;
-        uint16_t i;
 
         if ((pos->rta_type & NLA_TYPE_MASK) != BRIDGE_VLANDB_ENTRY)
             continue;
@@ -249,8 +243,9 @@ static int fill_vlan_table_msg(struct nlmsghdr *n, void *arg)
         if (!range)
             range = info->vid;
 
-        for (i = info->vid; i <= range; i++)
-            if_data->vlan_state[i] = state;
+
+        for (uint16_t vid = info->vid; vid <= range; vid++)
+            uni_data->vlan_state[vid] = state;
     }
 
     return 0;
@@ -277,26 +272,24 @@ static int dump_listen_msg(struct rtnl_ctrl_data *, struct nlmsghdr *n,
     return dump_msg(n, arg);
 }
 
-int fill_vlan_table(sysdep_if_data_t *if_data)
+int fill_vlan_table(sysdep_uni_data_t *uni_data)
 {
-    struct br_vlan_msg bvm = {
-        .family = PF_BRIDGE,
-     /* .ifindex = if_data->if_index, */
-    };
+    struct br_vlan_msg bvm;
+
+    memset(&bvm, 0, sizeof(bvm));
+    bvm.family = PF_BRIDGE;
+    bvm.ifindex = uni_data->if_index;
 
     if(!have_per_vlan_state)
         return 0;
 
-    /* For unknown reason setting ifindex to non-zero will cause the kernel
-     * to flood us with the same message over and over again, so filter
-     * within mstpd for now */
     if(rtnl_dump_request(&rth_state, RTM_GETVLAN, &bvm, sizeof(bvm)) < 0)
     {
         ERROR("Cannot send dump request: %m\n");
         return -1;
     }
 
-    if(rtnl_dump_filter(&rth_state, fill_vlan_table_msg, if_data) < 0)
+    if(rtnl_dump_filter(&rth_state, fill_vlan_table_msg, uni_data) < 0)
     {
         ERROR("Dump terminated\n");
         return -1;
