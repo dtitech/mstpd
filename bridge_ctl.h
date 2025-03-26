@@ -57,6 +57,8 @@ typedef struct
 
     bool up;
     __u8 vlan_state[4095];         /* current per vlan state */
+
+    bool mst_en;                   /* kernel MST support enabled */
 } sysdep_br_data_t;
 
 typedef struct
@@ -111,6 +113,8 @@ int bridge_notify(int br_index, int if_index, const char *if_name, bool newlink,
 void bridge_bpdu_rcv(int ifindex, const unsigned char *data, int len);
 
 void bridge_one_second(void);
+
+int bridge_mst_notify(int if_index, bool mst_en);
 
 int bridge_vlan_notify(int if_index, bool newvlan, __u16 vid, __u8 state);
 
