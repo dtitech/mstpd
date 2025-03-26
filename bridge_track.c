@@ -698,11 +698,15 @@ static int br_flush_port(struct rtnl_handle *rth, unsigned br_ifindex, unsigned 
     req.ndm.ndm_family = PF_BRIDGE;
     req.ndm.ndm_ifindex = br_ifindex;
 
-    req.ndm.ndm_flags = NTF_SELF;
+    req.ndm.ndm_flags = NTF_SELF | NTF_MASTER;
+    /* only flush dynamic entries */
+    req.ndm.ndm_state = 0;
 
+    addattr16(&req.n, sizeof(req.buf), NDA_NDM_STATE_MASK,
+              NUD_NOARP | NUD_PERMANENT);
     addattr32(&req.n, sizeof(req.buf), NDA_IFINDEX, port_ifindex);
     if (vid > -1)
-	    addattr16(&req.n, sizeof(req), NDA_VLAN, vid);
+        addattr16(&req.n, sizeof(req), NDA_VLAN, vid);
 
     return rtnl_talk(rth, &req.n, NULL);
 }
