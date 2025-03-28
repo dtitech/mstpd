@@ -48,6 +48,9 @@
 static LIST_HEAD(bridges);
 static LIST_HEAD(ports);
 
+static int br_set_vlan_state(struct rtnl_handle *rth, unsigned ifindex, __u16 vid, __u8 state);
+static int br_set_state(struct rtnl_handle *rth, unsigned ifindex, __u8 state);
+
 static bool exist_br_config(const char *brname)
 {
     char fname[128];
@@ -262,8 +265,6 @@ static bool check_mac_address(char *name, __u8 *addr)
         return true;
     }
 }
-
-static int br_set_state(struct rtnl_handle *rth, unsigned ifindex, __u8 state);
 
 static void set_br_up(bridge_t * br, bool up)
 {
@@ -529,8 +530,6 @@ int bridge_mst_notify(int br_index, bool mst_en)
     return 0;
 }
 
-static int br_set_vlan_state(struct rtnl_handle *rth, unsigned ifindex, __u16 vid, __u8 state);
-
 int bridge_vlan_notify(int if_index, bool newvlan, __u16 vid, __u8 state)
 {
     per_tree_port_t *ptp;
@@ -544,21 +543,31 @@ int bridge_vlan_notify(int if_index, bool newvlan, __u16 vid, __u8 state)
 
     br = find_br(if_index);
     if (br)
-      {
+    {
+        if (!newvlan)
+        {
+            /* VLAN was deleted, set as unassigned and return */
+            br->sysdeps.vlan_state[vid] = VLAN_STATE_UNASSIGNED;
+            return 0;
+        }
+
         br->sysdeps.vlan_state[vid] = state;
         return 0;
-      }
+    }
 
     prt = find_if(NULL, if_index);
     if (!prt)
         return 0;
 
+    if (!newvlan)
+    {
+        /* VLAN was deleted, set as unassigned and return */
+        prt->sysdeps.vlan_state[vid] = VLAN_STATE_UNASSIGNED;
+        return 0;
+    }
+
     br = prt->bridge;
     prt->sysdeps.vlan_state[vid] = state;
-
-    /* VLAN was deleted, nothing to do here */
-    if (!newvlan)
-        return 0;
 
     fid = br->vid2fid[vid];
     mstid = br->fid2mstid[fid];
