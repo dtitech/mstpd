@@ -530,6 +530,35 @@ int bridge_mst_notify(int br_index, bool mst_en)
     return 0;
 }
 
+static int br_set_vlan_msti(struct rtnl_handle *rth, unsigned ifindex,
+                            __u16 vid, __u16 msti)
+{
+    struct
+    {
+        struct nlmsghdr n;
+        struct br_vlan_msg bvm;
+        char buf[256];
+    } req;
+    struct rtattr *gopts;
+
+    memset(&req, 0, sizeof(req));
+
+    req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct br_vlan_msg));
+    req.n.nlmsg_flags = NLM_F_REQUEST;
+    req.n.nlmsg_type = RTM_NEWVLAN;
+    req.bvm.family = PF_BRIDGE;
+    req.bvm.ifindex = ifindex;
+
+    gopts = addattr_nest(&req.n, sizeof(req), BRIDGE_VLANDB_GLOBAL_OPTIONS | NLA_F_NESTED);
+
+    addattr16(&req.n, sizeof(req), BRIDGE_VLANDB_GOPTS_ID, vid);
+    addattr16(&req.n, sizeof(req), BRIDGE_VLANDB_GOPTS_MSTI, msti);
+
+    addattr_nest_end(&req.n, gopts);
+
+    return rtnl_talk(rth, &req.n, NULL);
+}
+
 int bridge_vlan_notify(int if_index, bool newvlan, __u16 vid, __u8 state)
 {
     per_tree_port_t *ptp;
@@ -549,6 +578,20 @@ int bridge_vlan_notify(int if_index, bool newvlan, __u16 vid, __u8 state)
             /* VLAN was deleted, set as unassigned and return */
             br->sysdeps.vlan_state[vid] = VLAN_STATE_UNASSIGNED;
             return 0;
+        }
+
+        if(br->sysdeps.mst_en)
+        {
+            __be16 MSTID = br->fid2mstid[br->vid2fid[vid]];
+            __u16 mstid = __be16_to_cpu(MSTID);
+
+            if(br->sysdeps.vlan_state[vid] == VLAN_STATE_UNASSIGNED)
+            {
+               LOG_BRNAME(br, "Bridge did not have vid %i yet, updating msti", vid);
+               if(0 > br_set_vlan_msti(&rth_state, br->sysdeps.if_index,
+                                     vid, mstid))
+                   ERROR_BRNAME(br, "Couldn't set kernel vlan %i to msti %i", vid, mstid);
+            }
         }
 
         br->sysdeps.vlan_state[vid] = state;
@@ -822,6 +865,18 @@ void MSTP_OUT_set_state(per_tree_port_t *ptp, int new_state)
         if(0 > br_set_state(&rth_state, prt->sysdeps.if_index, ptp->state))
             ERROR_PRTNAME(br, prt, "Couldn't set kernel bridge state %s",
                           state_name);
+    }
+}
+
+void MSTP_OUT_set_vid2mstid(bridge_t *br, __u16 vid, __u16 mstid)
+{
+    if(!br->sysdeps.mst_en)
+        return;
+
+    if(br->sysdeps.vlan_state[vid] != VLAN_STATE_UNASSIGNED)
+    {
+        if (0 > br_set_vlan_msti(&rth_state, br->sysdeps.if_index, vid, mstid))
+            ERROR_BRNAME(br, "Couldn't set kernel vlan %i to msti %i", vid, mstid);
     }
 }
 

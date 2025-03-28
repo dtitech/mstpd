@@ -1322,6 +1322,7 @@ bool MSTP_IN_set_vid2fid(bridge_t *br, __u16 vid, __u16 fid)
     br->vid2fid[vid] = fid;
     if(vid2mstid_changed)
     {
+        MSTP_OUT_set_vid2mstid(br, vid, __be16_to_cpu(br->fid2mstid[fid]));
         RecalcConfigDigest(br);
         br_state_machines_begin(br);
     }
@@ -1344,7 +1345,10 @@ bool MSTP_IN_set_all_vids2fids(bridge_t *br, __u16 *vids2fids)
             continue;
         }
         if(br->fid2mstid[vids2fids[vid]] != br->fid2mstid[br->vid2fid[vid]])
+        {
+            MSTP_OUT_set_vid2mstid(br, vid, __be16_to_cpu(br->fid2mstid[vids2fids[vid]]));
             vid2mstid_changed = true;
+        }
     }
     memcpy(br->vid2fid, vids2fids, sizeof(br->vid2fid));
     if(vid2mstid_changed)
@@ -1363,6 +1367,7 @@ bool MSTP_IN_set_fid2mstid(bridge_t *br, __u16 fid, __u16 mstid)
     __be16 MSTID;
     bool found;
     int vid;
+    bool vid2mstid_changed;
 
     if(fid > MAX_FID)
     {
@@ -1386,6 +1391,7 @@ bool MSTP_IN_set_fid2mstid(bridge_t *br, __u16 fid, __u16 mstid)
         return false;
     }
 
+    vid2mstid_changed = false;
     if(br->fid2mstid[fid] != MSTID)
     {
         br->fid2mstid[fid] = MSTID;
@@ -1394,10 +1400,15 @@ bool MSTP_IN_set_fid2mstid(bridge_t *br, __u16 fid, __u16 mstid)
         {
             if(br->vid2fid[vid] == fid)
             {
-                RecalcConfigDigest(br);
-                br_state_machines_begin(br);
-                break;
+                vid2mstid_changed = true;
+                MSTP_OUT_set_vid2mstid(br, vid, MSTID);
             }
+        }
+
+        if(vid2mstid_changed)
+        {
+            RecalcConfigDigest(br);
+            br_state_machines_begin(br);
         }
     }
 
@@ -1448,7 +1459,7 @@ bool MSTP_IN_set_all_fids2mstids(bridge_t *br, __u16 *fids2mstids)
         if(prev_vid2mstid[vid] != br->fid2mstid[br->vid2fid[vid]])
         {
             vid2mstid_changed = true;
-            break;
+            MSTP_OUT_set_vid2mstid(br, vid, br->fid2mstid[br->vid2fid[vid]]);
         }
     }
     if(vid2mstid_changed)
