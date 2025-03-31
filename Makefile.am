@@ -4,10 +4,10 @@ sbin_PROGRAMS = mstpd mstpctl
 
 mstpd_SOURCES = \
 	main.c epoll_loop.c epoll_loop.h clock_gettime.h brmon.c \
-	bridge_track.c bridge_track.h driver.h bridge_ctl.h libnetlink.c \
+	bridge_track.c bridge_track.h bridge_ctl.h libnetlink.c \
 	libnetlink.h mstp.c mstp.h packet.c packet.h netif_utils.c \
 	netif_utils.h ctl_socket_server.c ctl_socket_server.h hmac_md5.c \
-	list.h log.h driver_deps.c ctl_functions.c ctl_functions.h
+	list.h log.h ctl_functions.c ctl_functions.h
 
 mstpctl_SOURCES = \
 	ctl_main.c ctl_socket_client.c ctl_functions.c ctl_socket_client.h \

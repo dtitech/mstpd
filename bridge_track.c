@@ -38,7 +38,6 @@
 #include "packet.h"
 #include "log.h"
 #include "mstp.h"
-#include "driver.h"
 #include "libnetlink.h"
 
 #ifndef SYSFS_CLASS_NET
@@ -879,7 +878,7 @@ void MSTP_OUT_set_state(per_tree_port_t *ptp, int new_state)
 
     if(ptp->state == new_state)
         return;
-    ptp->state = driver_set_new_state(ptp, new_state);
+    ptp->state = new_state;
     state_name = stp_state_name(ptp->state);
 
     switch(ptp->state)
@@ -988,6 +987,8 @@ void MSTP_OUT_flush_all_fids(per_tree_port_t * ptp)
     port_t *prt = ptp->port;
     bridge_t *br = prt->bridge;
 
+    INFO_MSTINAME(br, prt, ptp, "Flushing forwarding database");
+
     /* Translate CIST flushing to the kernel bridge code */
     if(have_per_vlan_state)
     {
@@ -1010,25 +1011,22 @@ void MSTP_OUT_flush_all_fids(per_tree_port_t * ptp)
             ERROR_PRTNAME(br, prt,
                           "Couldn't flush kernel bridge forwarding database");
     }
-    /* Completion signal MSTP_IN_all_fids_flushed will be called by driver */
-    INFO_MSTINAME(br, prt, ptp, "Flushing forwarding database");
-    driver_flush_all_fids(ptp);
+
+    MSTP_IN_all_fids_flushed(ptp);
 }
 
 void MSTP_OUT_set_ageing_time(port_t *prt, unsigned int ageingTime)
 {
-    unsigned int actual_ageing_time;
     bridge_t *br = prt->bridge;
 
-    actual_ageing_time = driver_set_ageing_time(prt, ageingTime);
-    INFO_PRTNAME(br, prt, "Setting new ageing time to %u", actual_ageing_time);
+    INFO_PRTNAME(br, prt, "Setting new ageing time to %u", ageingTime);
 
     /*
      * Translate new ageing time to the kernel bridge code.
      * Kernel bridging code does not support per-port ageing time,
      * so set ageing time for the whole bridge.
      */
-    if(0 > br_set_ageing_time(br->sysdeps.name, actual_ageing_time))
+    if(0 > br_set_ageing_time(br->sysdeps.name, ageingTime))
         ERROR_BRNAME(br, "Couldn't set new ageing time in kernel bridge");
 }
 
@@ -1258,7 +1256,7 @@ int CTL_get_mstilist(int br_index, int *num_mstis, __u16 *mstids)
 int CTL_create_msti(int br_index, __u16 mstid)
 {
     CTL_CHECK_BRIDGE;
-    if((!driver_create_msti(br, mstid)) || (!MSTP_IN_create_msti(br, mstid)))
+    if(!MSTP_IN_create_msti(br, mstid))
         return -1;
     return 0;
 }
@@ -1266,7 +1264,7 @@ int CTL_create_msti(int br_index, __u16 mstid)
 int CTL_delete_msti(int br_index, __u16 mstid)
 {
     CTL_CHECK_BRIDGE;
-    if((!driver_delete_msti(br, mstid)) || (!MSTP_IN_delete_msti(br, mstid)))
+    if(!MSTP_IN_delete_msti(br, mstid))
         return -1;
     return 0;
 }

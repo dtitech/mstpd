@@ -42,7 +42,6 @@
 #include "log.h"
 #include "mstp.h"
 #include "ctl_socket_server.h"
-#include "driver.h"
 #include "bridge_track.h"
 
 #define APP_NAME    "mstpd"
@@ -181,7 +180,6 @@ int main(int argc, char *argv[])
     }
 
     TST(signal_init() == 0, -1);
-    TST(driver_mstp_init() == 0, -1);
     TST(init_epoll() == 0, -1);
     TST(ctl_socket_init() == 0, -1);
     TST(packet_sock_init() == 0, -1);
@@ -191,7 +189,6 @@ int main(int argc, char *argv[])
     c = epoll_main_loop(&quit);
     bridge_track_fini();
     ctl_socket_cleanup();
-    driver_mstp_fini();
 
     return c;
 }
