@@ -82,9 +82,9 @@ static void RecalcConfigDigest(bridge_t *br)
 
     vid2mstid[0] = vid2mstid[MAX_VID + 1] = 0;
     for(vid = 1; vid <= MAX_VID; ++vid)
-        vid2mstid[vid] = br->fid2mstid[br->vid2fid[vid]];
+        vid2mstid[vid] = br->vid2mstid[vid];
 
-    hmac_md5((void *)vid2mstid, sizeof(vid2mstid), mstp_key, sizeof(mstp_key),
+    hmac_md5((void *)br->vid2mstid, sizeof(br->vid2mstid), mstp_key, sizeof(mstp_key),
              (caddr_t)br->MstConfigId.s.configuration_digest);
 }
 
@@ -239,8 +239,7 @@ bool MSTP_IN_bridge_create(bridge_t *br, __u8 *macaddr)
     INIT_LIST_HEAD(&br->ports);
     INIT_LIST_HEAD(&br->trees);
     br->bridgeEnabled = false;
-    memset(br->vid2fid, 0, sizeof(br->vid2fid));
-    memset(br->fid2mstid, 0, sizeof(br->fid2mstid));
+    memset(br->vid2mstid, 0, sizeof(br->vid2mstid));
     assign(br->MstConfigId.s.selector, (__u8)0);
     sprintf((char *)br->MstConfigId.s.configuration_name,
             "%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX",
@@ -548,7 +547,7 @@ void MSTP_IN_one_second(bridge_t *br)
     br_state_machines_run(br);
 }
 
-void MSTP_IN_all_fids_flushed(per_tree_port_t *ptp)
+void MSTP_IN_all_mstids_flushed(per_tree_port_t *ptp)
 {
     bridge_t *br = ptp->port->bridge;
     ptp->fdbFlush = false;
@@ -1295,72 +1294,26 @@ int MSTP_IN_port_mcheck(port_t *prt)
     return 0;
 }
 
-/* 12.10.3.8 Set VID to FID allocation */
-bool MSTP_IN_set_vid2fid(bridge_t *br, __u16 vid, __u16 fid)
-{
-    bool vid2mstid_changed;
-
-    if((vid < 1) || (vid > MAX_VID) || (fid > MAX_FID))
-    {
-        ERROR_BRNAME(br, "Error allocating VID(%hu) to FID(%hu)", vid, fid);
-        return false;
-    }
-
-    vid2mstid_changed =
-        (br->fid2mstid[fid] != br->fid2mstid[br->vid2fid[vid]]);
-    br->vid2fid[vid] = fid;
-    if(vid2mstid_changed)
-    {
-        MSTP_OUT_set_vid2mstid(br, vid, __be16_to_cpu(br->fid2mstid[fid]));
-        RecalcConfigDigest(br);
-        br_state_machines_begin(br);
-    }
-
-    return true;
-}
-
-/* Set all VID-to-FID mappings at once */
-bool MSTP_IN_set_all_vids2fids(bridge_t *br, __u16 *vids2fids)
-{
-    bool vid2mstid_changed;
-    int vid;
-
-    vid2mstid_changed = false;
-    for(vid = 1; vid <= MAX_VID; ++vid)
-    {
-        if(vids2fids[vid] > MAX_FID)
-        { /* Incorrect value == keep prev value */
-            vids2fids[vid] = br->vid2fid[vid];
-            continue;
-        }
-        if(br->fid2mstid[vids2fids[vid]] != br->fid2mstid[br->vid2fid[vid]])
-        {
-            MSTP_OUT_set_vid2mstid(br, vid, __be16_to_cpu(br->fid2mstid[vids2fids[vid]]));
-            vid2mstid_changed = true;
-        }
-    }
-    memcpy(br->vid2fid, vids2fids, sizeof(br->vid2fid));
-    if(vid2mstid_changed)
-    {
-        RecalcConfigDigest(br);
-        br_state_machines_begin(br);
-    }
-
-    return true;
-}
-
-/* 12.12.2.2 Set FID to MSTID allocation */
-bool MSTP_IN_set_fid2mstid(bridge_t *br, __u16 fid, __u16 mstid)
+/* 12.10.3.8 and 12.12.2.2 Set VID to MSTID allocation */
+bool MSTP_IN_set_vid2mstid(bridge_t *br, __u16 vid, __u16 mstid)
 {
     tree_t *tree;
     __be16 MSTID;
     bool found;
-    int vid;
-    bool vid2mstid_changed;
 
-    if(fid > MAX_FID)
+    if((vid < 1) || (vid > MAX_VID))
     {
-        ERROR_BRNAME(br, "Bad FID(%hu)", fid);
+        ERROR_BRNAME(br,
+            "Error allocating VID(%hu) to MSTID(%hu): VID out of bounds",
+            vid, mstid);
+        return false;
+    }
+
+    if (mstid > MAX_MSTID)
+    {
+        ERROR_BRNAME(br,
+            "Error allocating VID(%hu) to MSTID(%hu): MSTID out of bounds",
+            vid, mstid);
         return false;
     }
 
@@ -1376,55 +1329,54 @@ bool MSTP_IN_set_fid2mstid(bridge_t *br, __u16 fid, __u16 mstid)
     }
     if(!found)
     {
-        ERROR_BRNAME(br, "MSTID(%hu) not found", mstid);
+        ERROR_BRNAME(br,
+            "Error allocating VID(%hu) to MSTID(%hu): MSTID not found",
+            vid, mstid);
         return false;
     }
 
-    vid2mstid_changed = false;
-    if(br->fid2mstid[fid] != MSTID)
-    {
-        br->fid2mstid[fid] = MSTID;
-        /* check if there are VLANs using this FID */
-        for(vid = 1; vid <= MAX_VID; ++vid)
-        {
-            if(br->vid2fid[vid] == fid)
-            {
-                vid2mstid_changed = true;
-                MSTP_OUT_set_vid2mstid(br, vid, MSTID);
-            }
-        }
-
-        if(vid2mstid_changed)
-        {
-            RecalcConfigDigest(br);
-            br_state_machines_begin(br);
-        }
-    }
+    if (br->vid2mstid[vid] != MSTID)
+      {
+        br->vid2mstid[vid] = MSTID;
+        MSTP_OUT_set_vid2mstid(br, vid, MSTID);
+        RecalcConfigDigest(br);
+        br_state_machines_begin(br);
+      }
 
     return true;
 }
 
-/* Set all FID-to-MSTID mappings at once */
-bool MSTP_IN_set_all_fids2mstids(bridge_t *br, __u16 *fids2mstids)
+/* Set all VID-to-MSTID mappings at once */
+bool MSTP_IN_set_all_vids2mstids(bridge_t *br, __u16 *vids2mstids)
 {
     tree_t *tree;
-    __be16 MSTID[MAX_FID + 1];
-    bool found, vid2mstid_changed;
-    int fid, vid;
-    __be16 prev_vid2mstid[MAX_VID + 2];
+    bool ret,found,vid2mstid_changed;
+    __be16 MSTID;
+    int vid;
 
-    for(fid = 0; fid <= MAX_FID; ++fid)
+    ret = true;
+    vid2mstid_changed = false;
+    for(vid = 1; vid <= MAX_VID; ++vid)
     {
-        if(fids2mstids[fid] > MAX_MSTID)
-        { /* Incorrect value == keep prev value */
-            fids2mstids[fid] = __be16_to_cpu(MSTID[fid] = br->fid2mstid[fid]);
+        /* Ignore signal == keep prev value */
+        if(vids2mstids[vid] == 0xffff)
+          continue;
+
+        if(vids2mstids[vid] > MAX_MSTID)
+        {
+            ERROR_BRNAME(br,
+                "Error allocating VID(%hu) to MSTID(%hu): MSTID out of bounds",
+                vid, vids2mstids[vid]);
+            /* Incorrect value == set to CIST */
+            MSTID = 0;
+            ret = false;
         }
         else
-            MSTID[fid] = __cpu_to_be16(fids2mstids[fid]);
+            MSTID = __cpu_to_be16(vids2mstids[vid]);
         found = false;
         FOREACH_TREE_IN_BRIDGE(tree, br)
         {
-            if(tree->MSTID == MSTID[fid])
+            if(tree->MSTID == MSTID)
             {
                 found = true;
                 break;
@@ -1433,31 +1385,28 @@ bool MSTP_IN_set_all_fids2mstids(bridge_t *br, __u16 *fids2mstids)
         if(!found)
         {
             ERROR_BRNAME(br,
-                "Error allocating FID(%hu) to MSTID(%hu): MSTID not found",
-                fid, fids2mstids[fid]);
-            return false;
+                "Error allocating VID(%hu) to MSTID(%hu): MSTID not found",
+                vid, vids2mstids[vid]);
+            /* Incorrect value == set to CIST */
+            MSTID = 0;
+            ret = false;
+        }
+
+        if (br->vid2mstid[vid] != MSTID)
+        {
+            br->vid2mstid[vid] = MSTID;
+            MSTP_OUT_set_vid2mstid(br, vid, MSTID);
+            vid2mstid_changed = true;
         }
     }
 
-    for(vid = 1; vid <= MAX_VID; ++vid)
-        prev_vid2mstid[vid] = br->fid2mstid[br->vid2fid[vid]];
-    memcpy(br->fid2mstid, MSTID, sizeof(br->fid2mstid));
-    vid2mstid_changed = false;
-    for(vid = 1; vid <= MAX_VID; ++vid)
-    {
-        if(prev_vid2mstid[vid] != br->fid2mstid[br->vid2fid[vid]])
-        {
-            vid2mstid_changed = true;
-            MSTP_OUT_set_vid2mstid(br, vid, br->fid2mstid[br->vid2fid[vid]]);
-        }
-    }
     if(vid2mstid_changed)
     {
         RecalcConfigDigest(br);
         br_state_machines_begin(br);
     }
 
-    return true;
+    return ret;
 }
 
 /* 12.12.1.1 Read MSTI List */
@@ -1561,7 +1510,7 @@ bool MSTP_IN_delete_msti(bridge_t *br, __u16 mstid)
 {
     tree_t *tree;
     per_tree_port_t *ptp, *nxt;
-    int fid;
+    int vid;
     bool found;
     __be16 MSTID = __cpu_to_be16(mstid);
 
@@ -1571,13 +1520,13 @@ bool MSTP_IN_delete_msti(bridge_t *br, __u16 mstid)
         return false;
     }
 
-    /* Check if there are FIDs associated with this MSTID */
-    for(fid = 0; fid <= MAX_FID; ++fid)
+    /* Check if there are VIDs associated with this MSTID */
+    for(vid = 0; vid <= MAX_VID; ++vid)
     {
-        if(br->fid2mstid[fid] == MSTID)
+        if(br->vid2mstid[vid] == MSTID)
         {
             ERROR_BRNAME(br,
-                "Can't delete MSTID(%hu): there are FIDs allocated to it",
+                "Can't delete MSTID(%hu): there are VIDs allocated to it",
                 mstid);
             return false;
         }
@@ -2186,7 +2135,7 @@ static void set_fdbFlush(per_tree_port_t *ptp)
     {
         ptp->fdbFlush = true;
         ptp->calledFromFlushRoutine = true;
-        MSTP_OUT_flush_all_fids(ptp);
+        MSTP_OUT_flush_all_mstids(ptp);
         ptp->calledFromFlushRoutine = false;
     }
     else

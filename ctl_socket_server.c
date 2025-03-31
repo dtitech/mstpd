@@ -76,12 +76,9 @@ static int handle_message(int cmd, void *inbuf, int lin,
         SERVER_MESSAGE_CASE(delete_msti);
         SERVER_MESSAGE_CASE(get_mstconfid);
         SERVER_MESSAGE_CASE(set_mstconfid);
-        SERVER_MESSAGE_CASE(get_vids2fids);
-        SERVER_MESSAGE_CASE(get_fids2mstids);
-        SERVER_MESSAGE_CASE(set_vid2fid);
-        SERVER_MESSAGE_CASE(set_fid2mstid);
-        SERVER_MESSAGE_CASE(set_vids2fids);
-        SERVER_MESSAGE_CASE(set_fids2mstids);
+        SERVER_MESSAGE_CASE(get_vids2mstids);
+        SERVER_MESSAGE_CASE(set_vid2mstid);
+        SERVER_MESSAGE_CASE(set_vids2mstids);
 
         case CMD_CODE_add_bridges:
         {

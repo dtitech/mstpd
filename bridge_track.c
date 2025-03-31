@@ -537,7 +537,7 @@ static bool port_has_tree_vlan(per_tree_port_t *ptp)
 
     for(vid = 1; vid <= MAX_VID; ++vid)
     {
-      if (br->fid2mstid[br->vid2fid[vid]] != ptp->MSTID)
+      if (br->vid2mstid[vid] != ptp->MSTID)
           continue;
 
       if (prt->sysdeps.vlan_state[vid] != VLAN_STATE_UNASSIGNED)
@@ -616,8 +616,8 @@ int bridge_vlan_notify(int if_index, bool newvlan, __u16 vid, __u8 state)
     port_t *prt = NULL;
     __be16 mstid;
 
-    LOG("if_index %d, newvlan %d, vid %d, state %d",
-        if_index, newvlan, vid, state);
+    LOG("if_index %d, newvlan %d, vid %hu, state %s",
+        if_index, newvlan, vid, stp_state_name(state));
 
     br = find_br(if_index);
     if (br)
@@ -631,15 +631,15 @@ int bridge_vlan_notify(int if_index, bool newvlan, __u16 vid, __u8 state)
 
         if(br->sysdeps.mst_en)
         {
-            __be16 MSTID = br->fid2mstid[br->vid2fid[vid]];
+            __be16 MSTID = br->vid2mstid[vid];
             __u16 mstid = __be16_to_cpu(MSTID);
 
             if(br->sysdeps.vlan_state[vid] == VLAN_STATE_UNASSIGNED)
             {
-               LOG_BRNAME(br, "Bridge did not have vid %i yet, updating msti", vid);
+               LOG_BRNAME(br, "Bridge did not have vid %hu yet, updating msti", vid);
                if(0 > br_set_vlan_msti(&rth_state, br->sysdeps.if_index,
                                      vid, mstid))
-                   ERROR_BRNAME(br, "Couldn't set kernel vlan %i to msti %i", vid, mstid);
+                   ERROR_BRNAME(br, "Couldn't set kernel vlan %hu to msti %hu", vid, mstid);
             }
         }
 
@@ -659,7 +659,7 @@ int bridge_vlan_notify(int if_index, bool newvlan, __u16 vid, __u8 state)
     }
 
     br = prt->bridge;
-    mstid = br->fid2mstid[br->vid2fid[vid]];
+    mstid = br->vid2mstid[vid];
 
     if (br->sysdeps.mst_en)
     {
@@ -669,7 +669,7 @@ int bridge_vlan_notify(int if_index, bool newvlan, __u16 vid, __u8 state)
             {
                 if(ptp->MSTID == mstid)
                 {
-                    LOG_PRTNAME(br, prt, "Port did not have msti %i yet, setting msti STP state %s",
+                    LOG_PRTNAME(br, prt, "Port did not have msti %hu yet, setting msti STP state %s",
                                 mstid, stp_state_name(ptp->state));
                     if(0 > br_set_msti_state(&rth_state,
                                              prt->sysdeps.if_index, mstid,
@@ -687,8 +687,8 @@ int bridge_vlan_notify(int if_index, bool newvlan, __u16 vid, __u8 state)
             {
                 if (ptp->state != state)
                     if (0 > br_set_vlan_state(&rth_state, if_index, vid, ptp->state))
-                        ERROR_MSTINAME(br, prt, ptp, "VID %i: failed setting STP state %i in kernel",
-                                       vid, ptp->state);
+                        ERROR_MSTINAME(br, prt, ptp, "VID %hu: failed setting STP state %s in kernel",
+                                       vid, stp_state_name(ptp->state));
                 break;
             }
 
@@ -773,7 +773,7 @@ static int br_set_vlan_state(struct rtnl_handle *rth, unsigned ifindex, __u16 vi
     struct bridge_vlan_info vlan_info;
     struct rtattr *nest;
 
-    LOG("ifindex %d vid %d state %d", ifindex, vid, state);
+    LOG("ifindex %d vid %hu state %s", ifindex, vid, stp_state_name(state));
 
     memset(&req, 0, sizeof(req));
 
@@ -809,7 +809,7 @@ static int br_set_state(struct rtnl_handle *rth, unsigned ifindex, __u8 state)
         char buf[256];
     } req;
 
-    LOG("ifindex %d state %d", ifindex, state);
+    LOG("ifindex %d state %s", ifindex, stp_state_name(state));
 
     memset(&req, 0, sizeof(req));
 
@@ -898,14 +898,14 @@ void MSTP_OUT_set_state(per_tree_port_t *ptp, int new_state)
     {
         for (int vid = 1; vid <= MAX_VID; vid++)
         {
-            if (br->fid2mstid[br->vid2fid[vid]] != ptp->MSTID)
+            if (br->vid2mstid[vid] != ptp->MSTID)
                 continue;
 
             if (prt->sysdeps.vlan_state[vid] == VLAN_STATE_UNASSIGNED)
                 continue;
 
             if(0 > br_set_vlan_state(&rth_state, prt->sysdeps.if_index, vid, ptp->state))
-               ERROR_PRTNAME(br, prt, "Couldn't set kernel bridge state %s for vid %i",
+               ERROR_PRTNAME(br, prt, "Couldn't set kernel bridge state %s for vid %hu",
                              state_name, vid);
             prt->sysdeps.vlan_state[vid] = new_state;
         }
@@ -980,9 +980,9 @@ void MSTP_OUT_set_vid2mstid(bridge_t *br, __u16 vid, __u16 mstid)
  * all entries for the given port in all FIDs for the
  * given tree.
  * When this process finishes, implementation should signal
- * this by calling MSTP_IN_all_fids_flushed(per_tree_port_t *ptp)
+ * this by calling MSTP_IN_all_mstids_flushed(per_tree_port_t *ptp)
  */
-void MSTP_OUT_flush_all_fids(per_tree_port_t * ptp)
+void MSTP_OUT_flush_all_mstids(per_tree_port_t * ptp)
 {
     port_t *prt = ptp->port;
     bridge_t *br = prt->bridge;
@@ -994,7 +994,7 @@ void MSTP_OUT_flush_all_fids(per_tree_port_t * ptp)
     {
         for (int vid = 1; vid <= MAX_VID; vid++)
         {
-            if (br->fid2mstid[br->vid2fid[vid]] != ptp->MSTID)
+            if (br->vid2mstid[vid] != ptp->MSTID)
                 continue;
 
             if (prt->sysdeps.vlan_state[vid] == VLAN_STATE_UNASSIGNED)
@@ -1012,7 +1012,7 @@ void MSTP_OUT_flush_all_fids(per_tree_port_t * ptp)
                           "Couldn't flush kernel bridge forwarding database");
     }
 
-    MSTP_IN_all_fids_flushed(ptp);
+    MSTP_IN_all_mstids_flushed(ptp);
 }
 
 void MSTP_OUT_set_ageing_time(port_t *prt, unsigned int ageingTime)
@@ -1283,44 +1283,24 @@ int CTL_set_mstconfid(int br_index, __u16 revision, __u8 *name)
     return 0;
 }
 
-int CTL_get_vids2fids(int br_index, __u16 *vids2fids)
+int CTL_get_vids2mstids(int br_index, __u16 *vids2mstids)
 {
     CTL_CHECK_BRIDGE;
-    memcpy(vids2fids, br->vid2fid, sizeof(br->vid2fid));
+    for (int i = 0; i < COUNT_OF(br->vid2mstid); ++i)
+        vids2mstids[i] = __be16_to_cpu(br->vid2mstid[i]);
     return 0;
 }
 
-int CTL_get_fids2mstids(int br_index, __u16 *fids2mstids)
+int CTL_set_vid2mstid(int br_index, __u16 vid, __u16 mstid)
 {
     CTL_CHECK_BRIDGE;
-    int i;
-    for(i = 0; i < COUNT_OF(br->fid2mstid); ++i)
-        fids2mstids[i] = __be16_to_cpu(br->fid2mstid[i]);
-    return 0;
+    return MSTP_IN_set_vid2mstid(br, vid, mstid) ? 0 : -1;
 }
 
-int CTL_set_vid2fid(int br_index, __u16 vid, __u16 fid)
+int CTL_set_vids2mstids(int br_index, __u16 *vids2mstids)
 {
     CTL_CHECK_BRIDGE;
-    return MSTP_IN_set_vid2fid(br, vid, fid) ? 0 : -1;
-}
-
-int CTL_set_fid2mstid(int br_index, __u16 fid, __u16 mstid)
-{
-    CTL_CHECK_BRIDGE;
-    return MSTP_IN_set_fid2mstid(br, fid, mstid) ? 0 : -1;
-}
-
-int CTL_set_vids2fids(int br_index, __u16 *vids2fids)
-{
-    CTL_CHECK_BRIDGE;
-    return MSTP_IN_set_all_vids2fids(br, vids2fids) ? 0 : -1;
-}
-
-int CTL_set_fids2mstids(int br_index, __u16 *fids2mstids)
-{
-    CTL_CHECK_BRIDGE;
-    return MSTP_IN_set_all_fids2mstids(br, fids2mstids) ? 0 : -1;
+    return MSTP_IN_set_all_vids2mstids(br, vids2mstids) ? 0 : -1;
 }
 
 int CTL_add_bridges(int *br_array, int* *ifaces_lists)

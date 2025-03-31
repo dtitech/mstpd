@@ -52,7 +52,6 @@ extern bool MD5TestSuite(void);
 
 #define MAX_PORT_NUMBER 4095
 #define MAX_VID         4094
-#define MAX_FID         4095
 #define MAX_MSTID       4094
 
 /* MAX_xxx_MSTIS: CIST not counted */
@@ -397,8 +396,7 @@ typedef struct
     unsigned int Migrate_Time;        /* 13.22.h */
     unsigned int Ageing_Time;  /* 8.8.3 */
 
-    __u16 vid2fid[MAX_VID + 1];
-    __be16 fid2mstid[MAX_FID + 1];
+    __be16 vid2mstid[MAX_VID + 1];
 
     /* not in standard */
     unsigned int uptime;
@@ -571,13 +569,11 @@ void MSTP_IN_set_bridge_address(bridge_t *br, __u8 *macaddr);
 void MSTP_IN_set_bridge_enable(bridge_t *br, bool up);
 void MSTP_IN_set_port_enable(port_t *prt, bool up, int speed, int duplex);
 void MSTP_IN_one_second(bridge_t *br);
-void MSTP_IN_all_fids_flushed(per_tree_port_t *ptp);
+void MSTP_IN_all_mstids_flushed(per_tree_port_t *ptp);
 void MSTP_IN_rx_bpdu(port_t *prt, bpdu_t *bpdu, int size);
 
-bool MSTP_IN_set_vid2fid(bridge_t *br, __u16 vid, __u16 fid);
-bool MSTP_IN_set_all_vids2fids(bridge_t *br, __u16 *vids2fids);
-bool MSTP_IN_set_fid2mstid(bridge_t *br, __u16 fid, __u16 mstid);
-bool MSTP_IN_set_all_fids2mstids(bridge_t *br, __u16 *fids2mstids);
+bool MSTP_IN_set_vid2mstid(bridge_t *br, __u16 fid, __u16 mstid);
+bool MSTP_IN_set_all_vids2mstids(bridge_t *br, __u16 *vids2mstids);
 bool MSTP_IN_get_mstilist(bridge_t *br, int *num_mstis, __u16 *mstids);
 bool MSTP_IN_create_msti(bridge_t *br, __u16 mstid);
 bool MSTP_IN_delete_msti(bridge_t *br, __u16 mstid);
@@ -586,7 +582,7 @@ void MSTP_IN_set_mst_config_id(bridge_t *br, __u16 revision, __u8 *name);
 /* External actions (outputs) */
 void MSTP_OUT_set_state(per_tree_port_t *ptp, int new_state);
 void MSTP_OUT_set_vid2mstid(bridge_t *br, __u16 vid, __u16 mstid);
-void MSTP_OUT_flush_all_fids(per_tree_port_t *ptp);
+void MSTP_OUT_flush_all_mstids(per_tree_port_t *ptp);
 void MSTP_OUT_set_ageing_time(port_t *prt, unsigned int ageingTime);
 void MSTP_OUT_tx_bpdu(port_t *prt, bpdu_t *bpdu, int size);
 void MSTP_OUT_shutdown_port(port_t *prt);

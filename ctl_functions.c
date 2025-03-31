@@ -1938,111 +1938,25 @@ static int cmd_deletetree(int argc, char *const *argv)
     return CTL_delete_msti(br_index, mstid);
 }
 
-static int do_showvid2fid_fmt(__u16 *vid2fid,
-                              const char *br_name)
+static int do_showvid2mstid_fmt(__u16 *vid2mstid, const char *br_name)
 {
     if(FORMAT_PLAIN == format)
-        printf("%s VID-to-FID allocation table:\n", br_name);
+        printf("%s VID-to-MSTID allocation table:\n", br_name);
     else if(FORMAT_JSON == format)
     {
         printf("{\"bridge\":\"%s\",", br_name);
-        printf("\"vid2fid\":[");
+        printf("\"vid2mstid\":[");
     }
-
     unsigned int i;
-    int out_count = 0;
     unsigned int interval_count;
+    int out_count = 0;
     char first_char;
-    vid2fid[MAX_VID + 1] = 0xFFFF; /* helps to finalize last interval */
+    vid2mstid[MAX_VID + 1] = 0xFFFF; /* helps to finalize last interval */
     do{
-        unsigned int cur_fid = vid2fid[1];
+        unsigned int cur_mstid = vid2mstid[0];
         for(i = 1; i <= MAX_VID; ++i)
-            if(cur_fid > vid2fid[i])
-                cur_fid = vid2fid[i];
-        if(cur_fid > MAX_FID)
-            break;
-        if(FORMAT_PLAIN == format)
-            printf("  FID %u:", cur_fid);
-        else if(FORMAT_JSON == format)
-        {
-            if(0 < out_count)
-                printf(",");
-            printf("{\"fid\":\"%u\",\"vid\":[", cur_fid);
-        }
-        first_char = ' ';
-        for(i = 1, interval_count = 0; i <= (MAX_VID + 1); ++i)
-        {
-            if(cur_fid != vid2fid[i])
-            {
-                if(interval_count)
-                {
-                    if(FORMAT_PLAIN == format)
-                        printf("%c%u", first_char, i - interval_count);
-                    else if(FORMAT_JSON == format)
-                        printf("%c\"%u", first_char, i - interval_count);
-                    first_char = ',';
-                    if(1 < interval_count)
-                        printf("-%u", i - 1);
-                    if(FORMAT_JSON == format)
-                        printf("\"");
-                    interval_count = 0;
-                }
-                continue;
-            }
-            vid2fid[i] = 0xFFFF;
-            ++interval_count;
-        }
-        if(FORMAT_PLAIN == format)
-            printf("\n");
-        else if(FORMAT_JSON == format)
-            printf("]}");
-        ++out_count;
-    }while(true);
-    if(FORMAT_JSON == format)
-        printf("}");
-
-    return 0;
-}
-
-static int cmd_showvid2fid(int argc, char *const *argv)
-{
-    __u16 vid2fid[MAX_VID + 2];
-    int br_index = get_index(argv[1], "bridge");
-    if(0 > br_index)
-        return br_index;
-
-    if(CTL_get_vids2fids(br_index, vid2fid))
-        return -1;
-
-    switch(format)
-    {
-        case FORMAT_PLAIN:
-        case FORMAT_JSON:
-            return do_showvid2fid_fmt(vid2fid, argv[1]);
-        default:
-            return -3; /* -3 = unsupported or unknown format */
-    }
-}
-
-static int do_showfid2mstid_fmt(__u16 *fid2mstid, const char *br_name)
-{
-    if(FORMAT_PLAIN == format)
-        printf("%s FID-to-MSTID allocation table:\n", br_name);
-    else if(FORMAT_JSON == format)
-    {
-        printf("{\"bridge\":\"%s\",", br_name);
-        printf("\"fid2mstid\":[");
-    }
-    unsigned int i;
-    unsigned int interval_count;
-    int out_count = 0;
-    char first_char;
-    fid2mstid[MAX_FID + 1] = 0xFFFF; /* helps to finalize last interval */
-    do{
-        unsigned int cur_mstid = fid2mstid[0];
-        for(i = 1; i <= MAX_FID; ++i)
-            if(cur_mstid > fid2mstid[i])
-                cur_mstid = fid2mstid[i];
+            if(cur_mstid > vid2mstid[i])
+                cur_mstid = vid2mstid[i];
         if(cur_mstid > MAX_MSTID)
             break;
         if(FORMAT_PLAIN == format)
@@ -2051,12 +1965,12 @@ static int do_showfid2mstid_fmt(__u16 *fid2mstid, const char *br_name)
         {
             if(0 < out_count)
                 printf(",");
-            printf("{\"mstid\":\"%u\",\"fid\":[", cur_mstid);
+            printf("{\"mstid\":\"%u\",\"vid\":[", cur_mstid);
         }
         first_char = ' ';
-        for(i = 0, interval_count = 0; i <= (MAX_FID + 1); ++i)
+        for(i = 0, interval_count = 0; i <= (MAX_VID + 1); ++i)
         {
-            if(cur_mstid != fid2mstid[i])
+            if(cur_mstid != vid2mstid[i])
             {
                 if(interval_count)
                 {
@@ -2073,7 +1987,7 @@ static int do_showfid2mstid_fmt(__u16 *fid2mstid, const char *br_name)
                 }
                 continue;
             }
-            fid2mstid[i] = 0xFFFF;
+            vid2mstid[i] = 0xFFFF;
             ++interval_count;
         }
         if(FORMAT_PLAIN == format)
@@ -2088,21 +2002,21 @@ static int do_showfid2mstid_fmt(__u16 *fid2mstid, const char *br_name)
     return 0;
 }
 
-static int cmd_showfid2mstid(int argc, char *const *argv)
+static int cmd_showvid2mstid(int argc, char *const *argv)
 {
-    __u16 fid2mstid[MAX_FID + 2];
+    __u16 vid2mstid[MAX_VID + 2];
     int br_index = get_index(argv[1], "bridge");
     if(0 > br_index)
         return br_index;
 
-    if(CTL_get_fids2mstids(br_index, fid2mstid))
+    if(CTL_get_vids2mstids(br_index, vid2mstid))
         return -1;
 
     switch(format)
     {
         case FORMAT_PLAIN:
         case FORMAT_JSON:
-            return do_showfid2mstid_fmt(fid2mstid, argv[1]);
+            return do_showvid2mstid_fmt(vid2mstid, argv[1]);
         default:
             return -3; /* -3 = unsupported or unknown format */
     }
@@ -2199,34 +2113,19 @@ bad_index:
     return 0;
 }
 
-static int cmd_setvid2fid(int argc, char *const *argv)
+static int cmd_setvid2mstid(int argc, char *const *argv)
 {
     int br_index = get_index(argv[1], "bridge");
     if(0 > br_index)
         return br_index;
-    __u16 vids2fids[MAX_VID + 1];
-    memset(vids2fids, 0xFF, sizeof(vids2fids));
+    __u16 vids2mstids[MAX_VID + 1];
+    memset(vids2mstids, 0xFF, sizeof(vids2mstids));
     int i, ret;
     for(i = 2; i < argc; ++i)
-        if(0 > (ret = ParseList(argv[i], vids2fids, MAX_VID, "VID",
-                                MAX_FID, "FID", true)))
-            return ret;
-    return CTL_set_vids2fids(br_index, vids2fids);
-}
-
-static int cmd_setfid2mstid(int argc, char *const *argv)
-{
-    int br_index = get_index(argv[1], "bridge");
-    if(0 > br_index)
-        return br_index;
-    __u16 fids2mstids[MAX_FID + 1];
-    memset(fids2mstids, 0xFF, sizeof(fids2mstids));
-    int i, ret;
-    for(i = 2; i < argc; ++i)
-        if(0 > (ret = ParseList(argv[i], fids2mstids, MAX_FID, "FID",
+        if(0 > (ret = ParseList(argv[i], vids2mstids, MAX_VID, "VID",
                                 MAX_MSTID, "mstid", false)))
             return ret;
-    return CTL_set_fids2mstids(br_index, fids2mstids);
+    return CTL_set_vids2mstids(br_index, vids2mstids);
 }
 
 static const struct command commands[] =
@@ -2244,10 +2143,8 @@ static const struct command commands[] =
      "<bridge>", "Show list of registered MSTIs"},
     {1, 0, "showmstconfid", cmd_showmstconfid,
      "<bridge>", "Show MST ConfigId"},
-    {1, 0, "showvid2fid", cmd_showvid2fid,
-     "<bridge>", "Show VID-to-FID allocation table"},
-    {1, 0, "showfid2mstid", cmd_showfid2mstid,
-     "<bridge>", "Show FID-to-MSTID allocation table"},
+    {1, 0, "showvid2mstid", cmd_showvid2mstid,
+     "<bridge>", "Show VID-to-MSTID allocation table"},
     /* Show global port */
     {1, 32, "showport", cmd_showport,
      "<bridge> [<port>...[port] [param]]", "Show port state for the CIST"},
@@ -2266,12 +2163,9 @@ static const struct command commands[] =
     {3, 0, "setmstconfid", cmd_setmstconfid,
      "<bridge> <revision> <name>",
      "Set MST ConfigId elements: Revision Level (0-65535) and Name"},
-    {2, 32, "setvid2fid", cmd_setvid2fid,
-     "<bridge> <FID>:<VIDs List> [<FID>:<VIDs List> ...]",
-     "Set VIDs-to-FIDs allocation"},
-    {2, 32, "setfid2mstid", cmd_setfid2mstid,
-     "<bridge> <mstid>:<FIDs List> [<mstid>:<FIDs List> ...]",
-     "Set FIDs-to-MSTIDs allocation"},
+    {2, 32, "setvid2mstid", cmd_setvid2mstid,
+     "<bridge> <mstid>:<VIDs List> [<mstid>:<VIDs List> ...]",
+     "Set VIDs-to-MSTIDs allocation"},
     {2, 0, "setmaxage", cmd_setbridgemaxage,
      "<bridge> <max_age>", "Set bridge max age (6-40)"},
     {2, 0, "setfdelay", cmd_setbridgefdelay,

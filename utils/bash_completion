@@ -10,14 +10,14 @@ _mstpctl()
     case $cword in
         1)
             COMPREPLY=( $( compgen -W " addbridge createtree deletetree \
-                delbridge debuglevel portmcheck setmstconfid setvid2fid \
-                setfid2mstid setmaxage setfdelay setmaxhops setforcevers \
-                settxholdcount settreeprio setportpathcost setportadminedge \
-                setportautoedge setportp2p setportrestrrole setportrestrtcn \
-                setbpduguard settreeportprio settreeportcost showbridge \
-                showmstilist showmstconfid showvid2fid showfid2mstid showport \
-                showportdetail showtree showtreeport sethello \
-                setageing setportnetwork setportbpdufilter" -- "$cur" ) )
+                delbridge debuglevel portmcheck setmstconfid setvid2mstid \
+                setmaxage setfdelay setmaxhops setforcevers settxholdcount \
+                settreeprio setportpathcost setportadminedge setportautoedge \
+                setportp2p setportrestrrole setportrestrtcn setbpduguard \
+                settreeportprio settreeportcost showbridge showmstilist \
+                showmstconfid showvid2mstid showport showportdetail showtree \
+                showtreeport sethello setageing setportnetwork \
+                setportbpdufilter" -- "$cur" ) )
             ;;
         2)
             case $command in

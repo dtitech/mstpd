@@ -351,107 +351,56 @@ struct set_mstconfid_OUT
 #define set_mstconfid_CALL (in->br_index, in->revision, in->name)
 CTL_DECLARE(set_mstconfid);
 
-/* get_vids2fids */
-#define CMD_CODE_get_vids2fids  116
-#define get_vids2fids_ARGS (int br_index, __u16 *vids2fids)
-struct get_vids2fids_IN
+/* get_vids2mstids */
+#define CMD_CODE_get_vids2mstids    124
+#define get_vids2mstids_ARGS (int br_index, __u16 *vids2mstids)
+struct get_vids2mstids_IN
 {
     int br_index;
 };
-struct get_vids2fids_OUT
+struct get_vids2mstids_OUT
 {
-    __u16 vids2fids[MAX_VID + 1];
+    __u16 vids2mstids[MAX_VID + 1];
 };
-#define get_vids2fids_COPY_IN  ({ in->br_index = br_index; })
-#define get_vids2fids_COPY_OUT ({ \
-    memcpy(vids2fids, out->vids2fids, sizeof(out->vids2fids)); })
-#define get_vids2fids_CALL (in->br_index, out->vids2fids)
-CTL_DECLARE(get_vids2fids);
+#define get_vids2mstids_COPY_IN  ({ in->br_index = br_index; })
+#define get_vids2mstids_COPY_OUT ({ \
+    memcpy(vids2mstids, out->vids2mstids, sizeof(out->vids2mstids)); })
+#define get_vids2mstids_CALL (in->br_index, out->vids2mstids)
+CTL_DECLARE(get_vids2mstids);
 
-/* get_fids2mstids */
-#define CMD_CODE_get_fids2mstids    117
-#define get_fids2mstids_ARGS (int br_index, __u16 *fids2mstids)
-struct get_fids2mstids_IN
+/* set_vid2mstid */
+#define CMD_CODE_set_vid2mstid  125
+#define set_vid2mstid_ARGS (int br_index, __u16 vid, __u16 mstid)
+struct set_vid2mstid_IN
 {
     int br_index;
+    __u16 vid, mstid;
 };
-struct get_fids2mstids_OUT
-{
-    __u16 fids2mstids[MAX_FID + 1];
-};
-#define get_fids2mstids_COPY_IN  ({ in->br_index = br_index; })
-#define get_fids2mstids_COPY_OUT ({ \
-    memcpy(fids2mstids, out->fids2mstids, sizeof(out->fids2mstids)); })
-#define get_fids2mstids_CALL (in->br_index, out->fids2mstids)
-CTL_DECLARE(get_fids2mstids);
-
-/* set_vid2fid */
-#define CMD_CODE_set_vid2fid    118
-#define set_vid2fid_ARGS (int br_index, __u16 vid, __u16 fid)
-struct set_vid2fid_IN
-{
-    int br_index;
-    __u16 vid, fid;
-};
-struct set_vid2fid_OUT
+struct set_vid2mstid_OUT
 {
 };
-#define set_vid2fid_COPY_IN  ({ in->br_index = br_index; in->vid = vid; \
-                                in->fid = fid; })
-#define set_vid2fid_COPY_OUT ({ (void)0; })
-#define set_vid2fid_CALL (in->br_index, in->vid, in->fid)
-CTL_DECLARE(set_vid2fid);
-
-/* set_fid2mstid */
-#define CMD_CODE_set_fid2mstid  119
-#define set_fid2mstid_ARGS (int br_index, __u16 fid, __u16 mstid)
-struct set_fid2mstid_IN
-{
-    int br_index;
-    __u16 fid, mstid;
-};
-struct set_fid2mstid_OUT
-{
-};
-#define set_fid2mstid_COPY_IN  ({ in->br_index = br_index; in->fid = fid; \
+#define set_vid2mstid_COPY_IN  ({ in->br_index = br_index; in->vid = vid; \
                                 in->mstid = mstid; })
-#define set_fid2mstid_COPY_OUT ({ (void)0; })
-#define set_fid2mstid_CALL (in->br_index, in->fid, in->mstid)
-CTL_DECLARE(set_fid2mstid);
+#define set_vid2mstid_COPY_OUT ({ (void)0; })
+#define set_vid2mstid_CALL (in->br_index, in->vid, in->mstid)
+CTL_DECLARE(set_vid2mstid);
 
-/* set_vids2fids */
-#define CMD_CODE_set_vids2fids  120
-#define set_vids2fids_ARGS (int br_index, __u16 *vids2fids)
-struct set_vids2fids_IN
+/* set_vids2mstids */
+#define CMD_CODE_set_vids2mstids    126
+#define set_vids2mstids_ARGS (int br_index, __u16 *vids2mstids)
+struct set_vids2mstids_IN
 {
     int br_index;
-    __u16 vids2fids[MAX_VID + 1];
+    __u16 vids2mstids[MAX_VID + 1];
 };
-struct set_vids2fids_OUT
+struct set_vids2mstids_OUT
 {
 };
-#define set_vids2fids_COPY_IN  ({ in->br_index = br_index; \
-    memcpy(in->vids2fids, vids2fids, sizeof(in->vids2fids)); })
-#define set_vids2fids_COPY_OUT ({ (void)0; })
-#define set_vids2fids_CALL (in->br_index, in->vids2fids)
-CTL_DECLARE(set_vids2fids);
-
-/* set_fids2mstids */
-#define CMD_CODE_set_fids2mstids    121
-#define set_fids2mstids_ARGS (int br_index, __u16 *fids2mstids)
-struct set_fids2mstids_IN
-{
-    int br_index;
-    __u16 fids2mstids[MAX_FID + 1];
-};
-struct set_fids2mstids_OUT
-{
-};
-#define set_fids2mstids_COPY_IN  ({ in->br_index = br_index; \
-    memcpy(in->fids2mstids, fids2mstids, sizeof(in->fids2mstids)); })
-#define set_fids2mstids_COPY_OUT ({ (void)0; })
-#define set_fids2mstids_CALL (in->br_index, in->fids2mstids)
-CTL_DECLARE(set_fids2mstids);
+#define set_vids2mstids_COPY_IN  ({ in->br_index = br_index; \
+    memcpy(in->vids2mstids, vids2mstids, sizeof(in->vids2mstids)); })
+#define set_vids2mstids_COPY_OUT ({ (void)0; })
+#define set_vids2mstids_CALL (in->br_index, in->vids2mstids)
+CTL_DECLARE(set_vids2mstids);
 
 /* add bridges */
 #define CMD_CODE_add_bridges    (122 | RESPONSE_FIRST_HANDLE_LATER)
