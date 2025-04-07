@@ -76,13 +76,7 @@ static void updtbrAssuRcvdInfoWhile(port_t *prt);
  */
 static void RecalcConfigDigest(bridge_t *br)
 {
-    __be16 vid2mstid[MAX_VID + 2];
     unsigned char mstp_key[] = HMAC_KEY;
-    int vid;
-
-    vid2mstid[0] = vid2mstid[MAX_VID + 1] = 0;
-    for(vid = 1; vid <= MAX_VID; ++vid)
-        vid2mstid[vid] = br->vid2mstid[vid];
 
     hmac_md5((void *)br->vid2mstid, sizeof(br->vid2mstid), mstp_key, sizeof(mstp_key),
              (caddr_t)br->MstConfigId.s.configuration_digest);
