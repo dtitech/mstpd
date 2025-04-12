@@ -45,6 +45,7 @@
 #include "mstp.h"
 #include "log.h"
 #include "clock_gettime.h"
+#include "hmac_md5.h"
 
 static void PTSM_tick(port_t *prt);
 static bool TCSM_run(per_tree_port_t *ptp, bool dry_run);

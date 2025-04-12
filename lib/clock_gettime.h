@@ -40,7 +40,7 @@ static inline int clock_gettime (clockid_t clock, struct timespec *ts)
 
     if (gettimeofday (&tv, NULL))
         return -1;
-        
+
     ts->tv_sec = tv.tv_sec;
     ts->tv_nsec = tv.tv_usec * 1000;
     return 0;

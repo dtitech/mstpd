@@ -18,8 +18,6 @@
 #include "bridge_ctl.h"
 #include "list.h"
 
-/* #define HMAC_MDS_TEST_FUNCTIONS */
-
 /* Useful macro for counting number of elements in array */
 #define COUNT_OF(x) ((sizeof(x)/sizeof(0[x])) / ((size_t)(!(sizeof(x) % sizeof(0[x])))))
 
@@ -40,15 +38,6 @@
     (void)(&_cmp1 == &_cmp2);   \
     memcmp(&_cmp1, &_cmp2, sizeof(_cmp1)); })
 #define cmp(x, _op, y) (_ncmp((x), (y)) _op 0)
-
-/* 13.7, Table 13-1 */
-#define HMAC_KEY    {0x13, 0xAC, 0x06, 0xA6, 0x2E, 0x47, 0xFD, 0x51, \
-                     0xF9, 0x5D, 0x2B, 0xA2, 0x43, 0xCD, 0x03, 0x46}
-extern void hmac_md5(unsigned char * text, int text_len, unsigned char * key,
-                     int key_len, caddr_t digest);
-#ifdef HMAC_MDS_TEST_FUNCTIONS
-extern bool MD5TestSuite(void);
-#endif /* HMAC_MDS_TEST_FUNCTIONS */
 
 #define MAX_PORT_NUMBER 4095
 #define MAX_VID         4094

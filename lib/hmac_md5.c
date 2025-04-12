@@ -24,7 +24,7 @@ documentation and/or software.
 #include <sys/types.h>
 #include <asm/types.h>
 
-#include "mstp.h"
+#include "hmac_md5.h"
 
 /* POINTER defines a generic pointer type */
 typedef unsigned char *POINTER;

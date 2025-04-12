@@ -2,13 +2,15 @@ ACLOCAL_AMFLAGS = -I m4
 
 sbin_PROGRAMS = mstpd mstpctl
 
+mstpd_libs = \
+	lib/hmac_md5.c lib/hmac_md5.h lib/libnetlink.c lib/libnetlink.h \
+	lib/netif_utils.c lib/netif_utils.h lib/list.h lib/log.h \
+	lib/clock_gettime.h lib/io_buffer.c lib/io_buffer.h
+
 mstpd_SOURCES = \
-	main.c epoll_loop.c epoll_loop.h clock_gettime.h brmon.c \
-	bridge_track.c bridge_track.h bridge_ctl.h libnetlink.c \
-	libnetlink.h mstp.c mstp.h packet.c packet.h netif_utils.c \
-	netif_utils.h ctl_socket_server.c ctl_socket_server.h hmac_md5.c \
-	list.h log.h ctl_functions.c ctl_functions.h lib/io_buffer.c \
-	lib/io_buffer.h
+	main.c mstp.c mstp.h epoll_loop.c epoll_loop.h packet.c packet.h \
+	bridge_track.c bridge_track.h ctl_socket_server.c ctl_socket_server.h \
+	brmon.c bridge_ctl.h ctl_functions.c ctl_functions.h $(mstpd_libs)
 
 mstpctl_SOURCES = \
 	ctl_main.c ctl_socket_client.c ctl_functions.c ctl_socket_client.h \
@@ -21,6 +23,8 @@ if ENABLE_DEVEL
   mstpd_CFLAGS += -g3 -O0 -Werror
 endif
 mstpctl_CFLAGS = $(mstpd_CFLAGS)
+
+AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/lib
 
 EXTRA_DIST = bridge-stp.in utils/ifupdown.sh.in utils/mstp_config_bridge.in \
 	utils/mstpd.service.in utils/bash_completion utils/nm-dispatcher.in \
