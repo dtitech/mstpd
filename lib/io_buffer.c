@@ -142,7 +142,7 @@ int iobuf_readcleanline(struct iobuf *buffer, char **begin)
         }
     }
 
-    buffer->pos = (buffer->data[bpos] == 0x0A) ? bpos + 1 : bpos;
+    buffer->pos = (bpos < bsize) ? bpos + 1 : bpos;
 
     for (; bpos > bbegin; bpos--)
     {
