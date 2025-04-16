@@ -26,6 +26,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <dirent.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include <fcntl.h>
@@ -41,6 +42,7 @@
 
 #include "log.h"
 
+#define SYSFS_PATH_MAX 256
 #ifndef SYSFS_CLASS_NET
 #define SYSFS_CLASS_NET "/sys/class/net"
 #endif
@@ -145,6 +147,13 @@ char *index_to_port_name(int index, char *name)
     return if_indextoname(index, name);
 }
 
+static int not_dot_dotdot(const struct dirent *entry)
+{
+    const char *n = entry->d_name;
+
+    return !('.' == n[0] && (0 == n[1] || ('.' == n[1] && 0 == n[2])));
+}
+
 /********* Sysfs based utility functions *************/
 
 /* This sysfs stuff might break with interface renames */
@@ -222,6 +231,20 @@ int get_bridge_portno(char *if_name)
     }
 out:
     close(fd);
+    return res;
+}
+
+int get_bridge_port_list(const char *if_name, struct dirent ***namelist)
+{
+    int res;
+    char buf[SYSFS_PATH_MAX];
+
+    /* strlen(sysfs_class_net) + strlen("/%.230s/brif") must be < sizeof(buf)
+       to prevent truncation ; gcc7's fortify headers complain about that */
+    snprintf(buf, sizeof(buf), SYSFS_CLASS_NET "/%.230s/brif", if_name);
+    if(0 > (res = scandir(buf, namelist, not_dot_dotdot, versionsort)))
+        ERROR("Error getting list of all ports of bridge %s", if_name);
+
     return res;
 }
 

@@ -27,6 +27,8 @@
 #ifndef NETIF_UTILS_H
 #define NETIF_UTILS_H
 
+#include <dirent.h>
+
 /* An inet socket for everyone to use for ifreqs. */
 int netsock_init(void);
 
@@ -39,6 +41,7 @@ int ethtool_get_speed_duplex(char *ifname, int *speed, int *duplex);
 bool is_bridge(char *if_name);
 int get_bridge_stpstate(const char *if_name);
 int get_bridge_portno(char *if_name);
+int get_bridge_port_list(const char *if_name, struct dirent ***namelist);
 
 char *index_to_name(int index, char *name);
 char *index_to_port_name(int index, char *name);

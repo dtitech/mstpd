@@ -454,33 +454,4 @@ CTL_DECLARE(name)                                                \
     return 0;                                                    \
 }
 
-/* Supported output formats */
-typedef enum {
-    FORMAT_PLAIN, /* plain text (default) */
-    FORMAT_JSON   /* JSON */
-} format_id_t;
-
-/* Output format */
-extern format_id_t format;
-
-struct command
-{
-    int nargs;
-    int optargs;
-    const char *name;
-    int (*func) (int argc, char *const *argv);
-    const char *format;
-    const char *help;
-};
-
-int get_index(const char *ifname, const char *doc);
-int get_port_list(const char *br_ifname, struct dirent ***namelist);
-
-const struct command *command_lookup_and_validate(int argc, char *const *argv,
-                                                  int line_num);
-
-int process_batch_cmds(FILE *batch_file, bool ignore, bool is_stdin);
-
-void help(void);
-
 #endif /* CTL_SOCKET_H */

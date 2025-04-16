@@ -11,11 +11,11 @@ mstpd_SOURCES = \
 	main.c mstp.c mstp.h epoll_loop.c epoll_loop.h packet.c packet.h \
 	bridge_track.c bridge_track.h mstpd_conf.c mstpd_conf.h \
 	ctl_socket_server.c ctl_socket_server.h brmon.c bridge_ctl.h \
-	ctl_functions.c ctl_functions.h $(mstpd_libs)
+	ctl_functions.h $(mstpd_libs)
 
 mstpctl_SOURCES = \
-	ctl_main.c ctl_socket_client.c ctl_functions.c ctl_socket_client.h \
-	ctl_functions.h
+	ctl_main.c ctl_socket_client.c ctl_socket_client.h ctl_functions.h \
+	lib/netif_utils.c lib/netif_utils.h
 
 mstpd_CFLAGS = \
 	-Os -Wall -D_REENTRANT -D__LINUX__ -I. \
@@ -23,7 +23,7 @@ mstpd_CFLAGS = \
 if ENABLE_DEVEL
   mstpd_CFLAGS += -g3 -O0 -Werror
 endif
-mstpctl_CFLAGS = $(mstpd_CFLAGS)
+mstpctl_CFLAGS = $(mstpd_CFLAGS) -DNO_DAEMON
 
 AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/lib
 

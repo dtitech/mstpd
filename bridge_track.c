@@ -333,7 +333,7 @@ static void set_if_up(port_t *prt, bool up)
 int bridge_try_autoadd(const char *br_name)
 {
     struct dirent **namelist;
-    int j, state, res, ifcount;
+    int j, state, res, ifcount, ifadd;
     int br_array[2];
     int *ifaces_list;
 
@@ -353,9 +353,15 @@ int bridge_try_autoadd(const char *br_name)
     }
 
     br_array[0] = 1;
-    br_array[1] = get_index(br_name, "bridge");
+    br_array[1] = if_nametoindex(br_name);
+    if (br_array[1] == 0)
+    {
+        ERROR("Can't find index for %s %s. Not a valid interface.",
+              "bridge", br_name);
+        return -2;
+    }
 
-    if(0 > (ifcount = get_port_list(br_name, &namelist)))
+    if(0 > (ifcount = get_bridge_port_list(br_name, &namelist)))
     {
         return ifcount;
     }
@@ -365,13 +371,22 @@ int bridge_try_autoadd(const char *br_name)
         return -1;
     }
 
-    ifaces_list[0] = ifcount;
+    ifadd = 0;
     for (j = 1; j <= ifcount; ++j)
     {
-        ifaces_list[j] = get_index(namelist[j - 1]->d_name, "port");
+        const int ifi = if_nametoindex(namelist[j - 1]->d_name);
+        if (ifi)
+        {
+            ifaces_list[ifadd + 1] = ifi;
+            ifadd++;
+        }
+        else
+            ERROR("Can't find index for %s %s. Not a valid interface.",
+                  "port", namelist[j - 1]);
         free(namelist[j - 1]);
     }
     free(namelist);
+    ifaces_list[0] = ifadd;
 
     res = CTL_add_bridges(br_array, &ifaces_list);
 

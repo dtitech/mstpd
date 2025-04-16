@@ -29,7 +29,6 @@
 #include <poll.h>
 
 #include "ctl_functions.h"
-#define NO_DAEMON
 #include "log.h"
 
 static int fd = -1;
