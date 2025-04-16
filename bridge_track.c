@@ -39,6 +39,7 @@
 #include "log.h"
 #include "mstp.h"
 #include "libnetlink.h"
+#include "mstpd_conf.h"
 
 #ifndef SYSFS_CLASS_NET
 #define SYSFS_CLASS_NET "/sys/class/net"
@@ -49,38 +50,6 @@ static LIST_HEAD(ports);
 
 static int br_set_vlan_state(struct rtnl_handle *rth, unsigned ifindex, __u16 vid, __u8 state);
 static int br_set_state(struct rtnl_handle *rth, unsigned ifindex, __u8 state);
-
-static bool exist_br_config(const char *brname)
-{
-    char fname[128];
-
-    snprintf(fname, sizeof(fname), MSTPD_CONFIG_DIR "/%s.conf", brname);
-
-    return (0 == access(fname, R_OK));
-}
-
-static void load_br_config(const char *brname)
-{
-    char fname[128];
-    FILE *config_file;
-    int rc;
-
-    snprintf(fname, sizeof(fname), MSTPD_CONFIG_DIR "/%s.conf", brname);
-
-    config_file = fopen(fname, "rb");
-    if (!config_file) {
-	    LOG("Failed to open %s", fname);
-	    return;
-    }
-
-    rc = process_batch_cmds(config_file, true, false);
-    if (!rc)
-	    INFO("Config applied for %s", brname);
-    else
-	    INFO("Failed applying config for %s: %i", brname, rc);
-
-    fclose(config_file);
-}
 
 static bridge_t * create_br(int if_index)
 {
@@ -103,7 +72,12 @@ static bridge_t * create_br(int if_index)
         goto err;
 
     list_add_tail(&br->list, &bridges);
-    load_br_config(br->sysdeps.name);
+
+    if (mstpd_conf_load_br(br))
+        INFO("Config applied for %s", br->sysdeps.name);
+    else
+        INFO("Failed applying config for %s", br->sysdeps.name);
+
     return br;
 err:
     free(br);
@@ -119,29 +93,6 @@ static bridge_t * find_br(int if_index)
             return br;
     }
     return NULL;
-}
-
-static void load_if_config(const char *brname, const char *ifname)
-{
-    char fname[128];
-    FILE *config_file;
-    int rc;
-
-    snprintf(fname, sizeof(fname), MSTPD_CONFIG_DIR "/%s/%s.conf", brname, ifname);
-
-    config_file = fopen(fname, "rb");
-    if (!config_file) {
-	    LOG("Failed to open %s", fname);
-	    return;
-    }
-
-    rc = process_batch_cmds(config_file, true, false);
-    if (!rc)
-	    INFO("Config applied for %s in %s", ifname, brname);
-    else
-	    INFO("Failed applying config for %s in %s: %i", ifname, brname, rc);
-
-    fclose(config_file);
 }
 
 static port_t * create_if(bridge_t * br, int if_index)
@@ -178,7 +129,11 @@ static port_t * create_if(bridge_t * br, int if_index)
     if(!MSTP_IN_port_create_and_add_tail(prt, portno))
         goto err;
     list_add_tail(&prt->list, &ports);
-    load_if_config(br->sysdeps.name, prt->sysdeps.name);
+
+    if (mstpd_conf_load_prt(prt))
+        INFO("Config applied for %s", prt->sysdeps.name);
+    else
+        INFO("Failed applying config for %s", prt->sysdeps.name);
 
     return prt;
 err:
@@ -382,7 +337,7 @@ int bridge_try_autoadd(const char *br_name)
     int br_array[2];
     int *ifaces_list;
 
-    if(!handle_all_bridges && !exist_br_config(br_name))
+    if(!handle_all_bridges && !mstpd_conf_exist_br(br_name))
     {
         INFO("No config file for bridge %s, ignored", br_name);
         return -2;

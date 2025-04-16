@@ -1422,7 +1422,7 @@ bool MSTP_IN_get_mstilist(bridge_t *br, int *num_mstis, __u16 *mstids)
 }
 
 /* 12.12.1.2 Create MSTI */
-bool MSTP_IN_create_msti(bridge_t *br, __u16 mstid)
+tree_t *MSTP_IN_create_msti(bridge_t *br, __u16 mstid)
 {
     tree_t *tree, *tree_after, *new_tree;
     per_tree_port_t *ptp, *nxt, *ptp_after, *new_ptp;
@@ -1432,7 +1432,7 @@ bool MSTP_IN_create_msti(bridge_t *br, __u16 mstid)
     if((mstid < 1) || (mstid > MAX_MSTID))
     {
         ERROR_BRNAME(br, "Bad MSTID(%hu)", mstid);
-        return false;
+        return NULL;
     }
 
     MSTID = __cpu_to_be16(mstid);
@@ -1447,7 +1447,7 @@ bool MSTP_IN_create_msti(bridge_t *br, __u16 mstid)
         if(tree->MSTID == MSTID)
         {
             INFO_BRNAME(br, "MSTID(%hu) is already in the list", mstid);
-            return true; /* yes, it is success */
+            return tree; /* yes, it is success */
         }
         if(cmp(tree->MSTID, <, MSTID))
             tree_after = tree;
@@ -1457,7 +1457,7 @@ bool MSTP_IN_create_msti(bridge_t *br, __u16 mstid)
     if(NULL == tree_after)
     {
         ERROR_BRNAME(br, "Can't add MSTID(%hu): no CIST in the list", mstid);
-        return false;
+        return NULL;
     }
     /* End of Sanity check */
 
@@ -1466,13 +1466,13 @@ bool MSTP_IN_create_msti(bridge_t *br, __u16 mstid)
     {
         ERROR_BRNAME(br, "Can't add MSTID(%hu): maximum count(%u) reached",
                      mstid, MAX_IMPLEMENTATION_MSTIS);
-        return false;
+        return NULL;
     }
 
     /* Create new tree and its list of PerTreePort structures */
     tree = GET_CIST_TREE(br);
     if(!(new_tree=create_tree(br,tree->BridgeIdentifier.s.mac_address,MSTID)))
-        return false;
+        return NULL;
 
     FOREACH_PTP_IN_TREE(ptp_after, tree_after)
     {
@@ -1485,7 +1485,7 @@ bool MSTP_IN_create_msti(bridge_t *br, __u16 mstid)
                 list_del(&ptp->tree_list);
                 free(ptp);
             }
-            return false;
+            return NULL;
         }
         list_add(&new_ptp->port_list, &ptp_after->port_list);
         list_add_tail(&new_ptp->tree_list, &new_tree->ports);
@@ -1497,7 +1497,7 @@ bool MSTP_IN_create_msti(bridge_t *br, __u16 mstid)
      * Just initialize state machines for this tree.
      */
     tree_state_machines_begin(new_tree);
-    return true;
+    return new_tree;
 }
 
 /* 12.12.1.3 Delete MSTI */

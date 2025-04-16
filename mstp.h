@@ -564,7 +564,7 @@ void MSTP_IN_rx_bpdu(port_t *prt, bpdu_t *bpdu, int size);
 bool MSTP_IN_set_vid2mstid(bridge_t *br, __u16 fid, __u16 mstid);
 bool MSTP_IN_set_all_vids2mstids(bridge_t *br, __u16 *vids2mstids);
 bool MSTP_IN_get_mstilist(bridge_t *br, int *num_mstis, __u16 *mstids);
-bool MSTP_IN_create_msti(bridge_t *br, __u16 mstid);
+tree_t *MSTP_IN_create_msti(bridge_t *br, __u16 mstid);
 bool MSTP_IN_delete_msti(bridge_t *br, __u16 mstid);
 void MSTP_IN_set_mst_config_id(bridge_t *br, __u16 revision, __u8 *name);
 

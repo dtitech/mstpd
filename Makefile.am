@@ -9,8 +9,9 @@ mstpd_libs = \
 
 mstpd_SOURCES = \
 	main.c mstp.c mstp.h epoll_loop.c epoll_loop.h packet.c packet.h \
-	bridge_track.c bridge_track.h ctl_socket_server.c ctl_socket_server.h \
-	brmon.c bridge_ctl.h ctl_functions.c ctl_functions.h $(mstpd_libs)
+	bridge_track.c bridge_track.h mstpd_conf.c mstpd_conf.h \
+	ctl_socket_server.c ctl_socket_server.h brmon.c bridge_ctl.h \
+	ctl_functions.c ctl_functions.h $(mstpd_libs)
 
 mstpctl_SOURCES = \
 	ctl_main.c ctl_socket_client.c ctl_functions.c ctl_socket_client.h \
