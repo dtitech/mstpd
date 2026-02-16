@@ -1333,7 +1333,16 @@ bool mstpd_conf_load_br(bridge_t *br)
     if (access(filename, R_OK) != 0)
     {
         INFO("%s: Missing config file %s", br->sysdeps.name, filename);
-        return true;
+
+        snprintf(filename, sizeof(filename), MSTPD_CONFIG_DIR "/bridge.default");
+
+        if (access(filename, R_OK) != 0)
+        {
+            INFO("%s: Missing default config file %s", br->sysdeps.name, filename);
+            return true;
+        }
+
+        INFO("%s: Using default config from %s", br->sysdeps.name, filename);
     }
 
     ctx.cif = (struct conf_if *)&cbr;
@@ -1386,7 +1395,26 @@ bool mstpd_conf_load_prt(port_t *prt)
     if (access(filename, R_OK) != 0)
     {
         INFO("%s: Missing config file %s", prt->sysdeps.name, filename);
-        return true;
+
+        snprintf(filename, sizeof(filename), MSTPD_CONFIG_DIR "/%s/port.default",
+                 br->sysdeps.name);
+
+        if (access(filename, R_OK) != 0)
+        {
+            INFO("%s: Missing default config file %s", br->sysdeps.name, filename);
+
+            snprintf(filename, sizeof(filename), MSTPD_CONFIG_DIR "/port.default");
+
+            if (access(filename, R_OK) != 0)
+            {
+                INFO("%s: Missing global default config file %s", br->sysdeps.name, filename);
+                return true;
+            }
+
+            INFO("%s: Using global default config from %s", br->sysdeps.name, filename);
+        }
+        else
+            INFO("%s: Using default config from %s", br->sysdeps.name, filename);
     }
 
     ctx.cif = (struct conf_if *)&cprt;

@@ -1,0 +1,6 @@
+admin-edge yes
+auto-edge no
+p2p auto
+rest-role yes
+rest-tcn yes
+bpdu-filter no

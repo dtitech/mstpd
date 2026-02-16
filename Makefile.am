@@ -109,6 +109,8 @@ install-exec-hook:
 	$(MKDIR_P) $(bashcompdest)
 	$(MKDIR_P) $(etcdest)/default ; \
 	$(INSTALL_DATA) $(srcdir)/mstpd.conf $(etcdest)/default/mstpd
+	$(MKDIR_P) $(etcdest)/mstpd ; \
+	$(INSTALL_DATA) $(srcdir)/conf/* $(etcdest)/mstpd
 	$(INSTALL_DATA) $(srcdir)/utils/bash_completion $(bashcompdest)/mstpctl
 	if [ -n "$(systemdunitdir)" ]; then \
 	  $(MKDIR_P) $(systemdunitdest) ; \
