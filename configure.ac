@@ -1,5 +1,5 @@
 AC_PREREQ([2.61])
-AC_INIT([mstpd], [0.1.0], [https://github.com/mstpd/mstpd])
+AC_INIT([mstpd], [0.1.0], [https://github.com/dtitech/mstpd])
 
 # bridge-stp must be installed in /sbin/, and the associated scripts and
 # executables should be installed outside of /usr/ by default.  If `./configure`
@@ -72,9 +72,9 @@ AS_IF([test "x$with_systemdunitdir" != "xdefault"],
       [AC_SUBST([systemdunitdir], [$with_systemdunitdir])])
 
 # Define PACKAGE_BUILD
-PACKAGE_BUILD=`git log --pretty=format:'%h' -n 1`
-AC_SUBST(PACKAGE_BUILD)
-AC_DEFINE_UNQUOTED(PACKAGE_BUILD, "$PACKAGE_BUILD", [Build revision obtained from git])
+AC_ARG_VAR(PACKAGE_BUILD, [Build revision obtained from git])
+AS_IF([test "x$PACKAGE_BUILD" = "x"],
+      [AC_SUBST([PACKAGE_BUILD], [`git log --pretty=format:'%h' -n 1`])])
 
 # Override PACKAGE_VERSION to include git tag
 PACKAGE_VERSION="${PACKAGE_VERSION}-${PACKAGE_BUILD}"
