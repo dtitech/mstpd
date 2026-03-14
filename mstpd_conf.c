@@ -36,7 +36,8 @@
 
 #define MAX_MAX_AGE 255
 #define MAX_FORWARD_DELAY 255
-#define MAX_HOPS 255
+#define MIN_HOPS 6
+#define MAX_HOPS 100
 #define MIN_HELLO 1
 #define MAX_HELLO 10
 #define FIX_HELLO 2
@@ -524,6 +525,32 @@ static int _fn_name(struct conf_ctx *ctx) \
     return 0; \
 }
 
+#define CONF_FN_OPT_UINTMX(_fn_name, _tgt_var, _min_val, _max_val) \
+static int _fn_name(struct conf_ctx *ctx) \
+{ \
+    unsigned int value; \
+    if (str_getuint(ctx->argv[0], &value)) \
+    { \
+        CTX_ERR(ctx, "Invalid %s value", ctx->optname); \
+        return -1; \
+    } \
+    if (value < _min_val) \
+    { \
+        CTX_INF(ctx, "Warning %s %lu, min is %d", ctx->optname, value, \
+                     _min_val); \
+        value = _min_val; \
+    } \
+    else if (value > _max_val) \
+    { \
+        CTX_INF(ctx, "Warning %s %lu, max is %d", ctx->optname, value, \
+                     _max_val); \
+        value = _max_val; \
+    } \
+    ctx->_tgt_var = value; \
+    ctx->_tgt_var ## _set = true; \
+    return 0; \
+}
+
 #define CONF_FN_OPT_YESNO(_fn_name, _tgt_var) \
 static int _fn_name(struct conf_ctx *ctx) \
 { \
@@ -560,7 +587,7 @@ static int conf_opt_br_mode(struct conf_ctx *ctx)
 
 CONF_FN_OPT_UINTX(conf_opt_br_max_age, br->max_age, MAX_MAX_AGE);
 CONF_FN_OPT_UINTX(conf_opt_br_forward_delay, br->forward_delay, MAX_FORWARD_DELAY);
-CONF_FN_OPT_UINTX(conf_opt_br_max_hops, br->max_hops, MAX_HOPS);
+CONF_FN_OPT_UINTMX(conf_opt_br_max_hops, br->max_hops, MIN_HOPS, MAX_HOPS);
 
 static int conf_opt_br_hello(struct conf_ctx *ctx)
 {
