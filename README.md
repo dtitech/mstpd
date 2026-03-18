@@ -61,14 +61,43 @@ interconnected with the VLANs infrastructure, namely:
   learning as opposed to shared learning in the current Linux bridges);
 
   - Support several (2 .. 64) Multiple Spanning Tree Instances in
-    addition to the CIST. Each FID belongs to the one of MSTIs or CIST;
+  addition to the CIST. Each FID belongs to the one of MSTIs or CIST;
 
   - Support per-MSTI port states (Discarding / Learning / Forwarding) so
   that each bridge port can have different states for different MSTIs.
 
-Daemon is currently using Linux bridge per VLAN stp states, so MSTP is
-usable on software bridge and on Mellanox Spectrum based platforms with
-included kernel patches.
+Linux bridging supports either IVL or SVL, but does not support dynamic
+allocation of VIDs to FIDs.
+
+This is controlled via the VLAN filtering attribute:
+
+  - When VLAN filtering is enabled, the bridge supports 4094 VLANs with
+  IVL, and requires configuration of all VLANs permitted;
+  - When VLAN filtering is disabled, the bridge is not VLAN aware and only
+  learns via the MAC address (into a separate "untagged" FID), so it does
+  SVL.
+
+Additionally Linux bridging gained support for MSTIs in version 5.18:
+
+  - VLANs configured on the bridge can be assigned to MSTIs;
+  - Once a VLANs is assigned to a MSTI, the port states of ports that are
+  members of that VLAN can be configured
+
+MSTPD currently supports Linux bridge MSTIs when bridge is configured
+with MST enabled, this is supported mainly on software bridge, but there
+are some DSA drivers which have MST support.
+
+With bridge MST disabled, daemon will use per VLAN stp states if they are
+supported in running Kernel, this mode is usable on software bridge and
+on Mellanox Spectrum based platforms with included kernel patches.
+
+> [!WARNING]
+> Linux bridges with MST enabled are mostly untested.
+
+> [!NOTE]
+> Running with per VLAN stp states in software, or on Mellanox Spectrum
+> based platforms with included kernel patches is tested, and used in
+> production environment.
 
 ACKNOWLEDGEMENTS
 ----------------
