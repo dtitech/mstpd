@@ -37,7 +37,9 @@
 #define MAX_MAX_AGE 255
 #define MAX_FORWARD_DELAY 255
 #define MAX_HOPS 255
-#define MAX_HELLO 255
+#define MIN_HELLO 1
+#define MAX_HELLO 10
+#define FIX_HELLO 2
 #define MAX_TX_HOLD_COUNT 255
 #define MAX_CONFIG_REV 0xFFFF
 #define MAX_BR_PRIO 65535
@@ -559,7 +561,34 @@ static int conf_opt_br_mode(struct conf_ctx *ctx)
 CONF_FN_OPT_UINTX(conf_opt_br_max_age, br->max_age, MAX_MAX_AGE);
 CONF_FN_OPT_UINTX(conf_opt_br_forward_delay, br->forward_delay, MAX_FORWARD_DELAY);
 CONF_FN_OPT_UINTX(conf_opt_br_max_hops, br->max_hops, MAX_HOPS);
-CONF_FN_OPT_UINTX(conf_opt_br_hello, br->hello, MAX_HELLO);
+
+static int conf_opt_br_hello(struct conf_ctx *ctx)
+{
+    unsigned int value;
+    if (str_getuint(ctx->argv[0], &value))
+    {
+        CTX_ERR(ctx, "Invalid %s value", ctx->optname);
+        return -1;
+    }
+    if (value < MIN_HELLO)
+    {
+        CTX_INF(ctx, "Warning %s %lu, min is %d", ctx->optname, value, MIN_HELLO);
+        value = 1;
+    }
+    else if (value > MAX_HELLO)
+    {
+        CTX_INF(ctx, "Warning %s %lu, max is %d", ctx->optname, value, MAX_HELLO);
+        value = 10;
+    }
+    if (value != FIX_HELLO)
+    {
+        CTX_INF(ctx, "Warning %s %lu, should be %d, other values are discouraged", ctx->optname, value, FIX_HELLO);
+    }
+    ctx->br->hello = value;
+    ctx->br->hello_set = true;
+    return 0;
+}
+
 CONF_FN_OPT_UINT(conf_opt_br_ageing, br->ageing);
 CONF_FN_OPT_UINTX(conf_opt_br_tx_hold_count, br->tx_hold_count, MAX_TX_HOLD_COUNT);
 

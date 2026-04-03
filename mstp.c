@@ -830,6 +830,10 @@ int MSTP_IN_set_cist_bridge_config(bridge_t *br, CIST_BridgeConfig *cfg)
             ERROR_BRNAME(br, "Bridge Hello Time must be between 1 and 10");
             r = -1;
         }
+        if((2 != cfg->bridge_hello_time))
+        {
+            INFO_BRNAME(br, "Bridge Hello Time should be 2, other values are discouraged");
+        }
     }
 
     if(cfg->set_bridge_ageing_time)
