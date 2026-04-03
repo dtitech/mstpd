@@ -1,6 +1,81 @@
 mstpd: Multiple Spanning Tree Protocol Daemon
 =============================================
 
+Version: 0.1.1
+---------------------------------------------
+- add showportparams command to show only specific params of a port
+  - Ali Forouzan <forouzan_a@office.zharfpoyan.net>
+- bridge-stp.in: support different versions of pidof
+  - Alexandru Ardelean <ardeleanalex@gmail.com>
+- mstpctl-utils-functions.sh: fix shellcheck warnings
+  - Jonas Gorski <jonas.gorski@bisdn.de>
+- fix printing error message in bridge_bpdu_rcv()
+  - QAQguowang <39701514+QAQguowang@users.noreply.github.com>
+- fix calculating costs for speeds > 65G
+  - Jonas Gorski <jonas.gorski@bisdn.de>
+- mstpctl: move command parsing into own unit
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- mstpd: allow persistent configuration files
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- netif_utils: Use harcoded speed if EOPNOTSUPP
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- use traditional priorities and add some checks
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- change bridge and interface configuration locations
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- bridge_track: Inverted condition of config result log
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- Autoadding bridges on startup
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- cmd: Changed formating of some mstpctl outputs
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- Renamed and moved config file
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- vlan: rename some functions and variables for readibility
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- bridge_track: fdb vlan flush only dynamic entries and support for DSA switches
+  - Jonas Gorski <jonas.gorski@gmail.com>
+- ifupdown.sh.in: fix new shellcheck warnings
+  - Jonas Gorski <jonas.gorski@gmail.com>
+- expand vlan status tracking to bridges
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- bridge: track kernel MST mode for bridges
+  - Jonas Gorski <jonas.gorski@gmail.com>
+- bug: Set VLAN state unassigned on removal
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- mstp: assign VIDs to MSTIs when mst is enabled
+  - Jonas Gorski <jonas.gorski@gmail.com>
+- add a function for getting a human readable stp state name
+  - Jonas Gorski <jonas.gorski@gmail.com>
+- bridge_track: set MSTI port STP states
+  - Jonas Gorski <jonas.gorski@gmail.com>
+- Remove driver support
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- Remove FIDs, we now bind VLANs directly to MSTIDs
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- Autoconf deprecated AC_HELP_STRING
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- BUG: Repair MSTP config digest
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- Add new io_buffer lib for incoming new config system
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- Move dependencies to lib directory
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- io_buffer overflow in readcleanline
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- Add new persistent configuration system
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- Cleanup after removing old persistent configuration system
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- Fix compilation with GCC 15 / gnu23
+  - Jonas Gorski <jonas.gorski@gmail.com>
+- Fix a stack memory information leak to client
+  - Jonas Gorski <jonas.gorski@gmail.com>
+- Try to load default config file for bridge/port if config file is missing
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+- Add autoconf option to manualy set PACKAGE_BUILD
+  - Tomas Kyzlink <tkyzlink@dtitech.cz>
+
 Version: 0.1.0
 ---------------------------------------------
 - libnetlink changes to start supporting Linux per-VLAN STP
