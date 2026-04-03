@@ -1081,7 +1081,14 @@ int MSTP_IN_set_cist_port_config(port_t *prt, CIST_PortConfig *cfg)
 
     if(cfg->set_admin_external_port_path_cost)
     {
-        prt->AdminExternalPortPathCost = cfg->admin_external_port_path_cost;
+        __u32 newCost = cfg->admin_external_port_path_cost;
+        if(200000000 < newCost)
+        {
+            INFO_PRTNAME(br, prt,
+                    "portpathcost must be between 0 and 200000000, truncated");
+            newCost = 200000000;
+        }
+        prt->AdminExternalPortPathCost = newCost;
         new_ExternalPathCost = (0 == prt->AdminExternalPortPathCost) ?
                                  compute_pcost(GET_PORT_SPEED(prt))
                                : prt->AdminExternalPortPathCost;
